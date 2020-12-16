@@ -356,14 +356,24 @@ void PolyBook::init(const std::string& bookfile)
     }
 
     fseek(fpt, 0L, SEEK_END);
-    int filesize = ftell(fpt);
+    size_t filesize = (size_t)ftell(fpt);
     fseek(fpt, 0L, SEEK_SET);
 
     keycount = filesize / 16;
-    polyhash = new PolyHash[keycount];
+    polyhash = (PolyHash *)malloc(filesize);
 
-    fread(polyhash, 1, filesize, fpt);
+    size_t readSize = fread(polyhash, 1, filesize, fpt);
     fclose(fpt);
+
+    if (readSize != filesize)
+    {
+        free(polyhash);
+        polyhash = NULL;
+        enabled = false;
+
+        sync_cout << "info string Could not read " << bookfile << sync_endl;
+        return;
+    }
 
     for (int i = 0; i<keycount; i++)
         byteswap_polyhash(&polyhash[i]);

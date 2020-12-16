@@ -34,14 +34,20 @@ const std::string engine_info(bool to_uci = false);
 const std::string compiler_info();
 
 void show_logo();
-const std::string os_info();
-const std::string processor_brand();
-const std::string numa_nodes();
-const std::string physical_cores();
-const std::string logical_cores();
-const std::string is_hyper_threading();
-const std::string cache_size(int idx);
-const std::string total_memory();
+std::string format_bytes(uint64_t bytes, int decimals);
+
+namespace SysInfo
+{
+    void init();
+    const std::string os_info();
+    const std::string processor_brand();
+    const std::string numa_nodes();
+    const std::string physical_cores();
+    const std::string logical_cores();
+    const std::string is_hyper_threading();
+    const std::string cache_info(int idx);
+    const std::string total_memory();
+}
 
 void prefetch(void* addr);
 void prefetch2(void* addr);
