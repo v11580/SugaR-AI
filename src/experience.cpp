@@ -158,9 +158,12 @@ namespace Experience
 
                         while (p)
                         {
-                            allMoves++;
+                            if (p->depth >= MIN_EXP_DEPTH)
+                            {
+                                allMoves++;
+                                out.write((const char*)p, sizeof(ExpEntry));
+                            }
 
-                            out.write((const char*)p, sizeof(ExpEntry));
                             p = p->next;
                         }
                     }
@@ -170,6 +173,9 @@ namespace Experience
                 int newPvExpCount = 0;
                 for (const ExpEntry& e : _newPvExp)
                 {
+                    if (e.depth < MIN_EXP_DEPTH)
+                        continue;
+
                     out.write((const char*)(&e), sizeof(ExpEntry));
                     if (!out)
                     {
@@ -184,6 +190,9 @@ namespace Experience
                 int newMultiPvExpCount = 0;
                 for (const ExpEntry& e : _newMultiPvExp)
                 {
+                    if (e.depth < MIN_EXP_DEPTH)
+                        continue;
+
                     out.write((const char*)(&e), sizeof(ExpEntry));
 
                     if (!out)

@@ -24,6 +24,8 @@
 
 using namespace std;
 
+#define MIN_EXP_DEPTH       4
+
 namespace Experience
 {
     struct ExpEntry

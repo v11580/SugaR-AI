@@ -282,7 +282,7 @@ void MainThread::search() {
                       int64_t valueWeight = 0;
                       bool drawDetected = false;
                       const Experience::ExpEntryEx* nextPosExpEx = tempExpEx;
-                      while (nextPosExpEx && exp.size() < experienceBookMovesAhead)
+                      while (nextPosExpEx && nextPosExpEx->depth >= MIN_EXP_DEPTH && exp.size() < experienceBookMovesAhead)
                       {
                           //Add this exp
                           valueSum += nextPosExpEx->value * nextPosExpEx->depth * multiplier * (rootPos.side_to_move() == sideToMove ? 1 : -1);
@@ -303,20 +303,23 @@ void MainThread::search() {
                           nextPosExpEx = Experience::probe(rootPos.key());
                       }
 
-                      //Undo the moves
-                      for (auto it = exp.rbegin(); it != exp.rend(); ++it)
-                          rootPos.undo_move((*it)->move);
-
-                      //Don't consider this experience move if a draw is detected
-                      if (!drawDetected)
+                      if (exp.size())
                       {
-                          //Calculate estimated sum
-                          estimatedValue[tempExpEx] = Value(valueSum / valueWeight);
+                          //Undo the moves
+                          for (auto it = exp.rbegin(); it != exp.rend(); ++it)
+                              rootPos.undo_move((*it)->move);
+
+                          //Don't consider this experience move if a draw is detected
+                          if (!drawDetected)
+                          {
+                              //Calculate estimated sum
+                              estimatedValue[tempExpEx] = Value(valueSum / valueWeight);
+                          }
                       }
 
                       //Next
                       tempExpEx = tempExpEx->next;
-                  };
+                  }
 
                   //Delegate to filter out drawing experience moves (the ones that are execluded earlier)
                   auto should_consider_exp_move = [&estimatedValue](const Experience::ExpEntryEx* ex)
@@ -458,8 +461,9 @@ void MainThread::search() {
   if (    bookMove == MOVE_NONE
       && !Experience::is_learning_paused()
       && !bestThread->rootPos.is_chess960()
-      && !(bool)Options["Experience Readonly"] &&
-         !(bool)Options["UCI_LimitStrength"])
+      && !(bool)Options["Experience Readonly"]
+	  && !(bool)Options["UCI_LimitStrength"]
+	  &&  bestThread->completedDepth >= MIN_EXP_DEPTH)
   {
       //Add best move
       Experience::add_pv_experience(bestThread->rootPos.key(), bestThread->rootMoves[0].pv[0], bestThread->rootMoves[0].score, bestThread->completedDepth);
