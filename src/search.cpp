@@ -260,7 +260,7 @@ void MainThread::search() {
           }
 
           //Check experience book second
-          if (bookMove == MOVE_NONE && (bool)Options["Experience Book"] && rootPos.game_ply() / 2 < (int)Options["Experience Book Max Moves"])
+          if (bookMove == MOVE_NONE && (bool)Options["Experience Book"] && rootPos.game_ply() / 2 < (int)Options["Experience Book Max Moves"] && Experience::enabled())
           {
               const Experience::ExpEntryEx* expEx = Experience::probe(rootPos.key());
 
@@ -931,7 +931,7 @@ namespace {
     formerPv = ss->ttPv && !PvNode;
 
     //Probe experience data
-    const Experience::ExpEntryEx *expEx = excludedMove == MOVE_NONE ? Experience::probe(pos.key()) : nullptr;
+    const Experience::ExpEntryEx *expEx = excludedMove == MOVE_NONE && Experience::enabled() ? Experience::probe(pos.key()) : nullptr;
     const Experience::ExpEntryEx* tempExp = expEx;
     const Experience::ExpEntryEx* bestExp = nullptr;
 
