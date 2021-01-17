@@ -1,17 +1,17 @@
 /*
   SugaR, a UCI chess playing engine derived from Stockfish
-  Copyright (C) 2004-2020 The Stockfish developers (see AUTHORS file)
-  
+  Copyright (C) 2004-2021 The Stockfish developers (see AUTHORS file)
+
   SugaR is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   SugaR is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -113,7 +113,7 @@ public:
   Bitboard blockers_for_king(Color c) const;
   Bitboard check_squares(PieceType pt) const;
   Bitboard pinners(Color c) const;
-  bool is_discovery_check_on_king(Color c, Move m) const;
+  bool is_discovered_check_on_king(Color c, Move m) const;
 
   // Attacks to/from a given square
   Bitboard attackers_to(Square s) const;
@@ -304,7 +304,7 @@ inline Bitboard Position::check_squares(PieceType pt) const {
   return st->checkSquares[pt];
 }
 
-inline bool Position::is_discovery_check_on_king(Color c, Move m) const {
+inline bool Position::is_discovered_check_on_king(Color c, Move m) const {
   return st->blockersForKing[c] & from_sq(m);
 }
 
@@ -371,7 +371,7 @@ inline bool Position::capture_or_promotion(Move m) const {
 inline bool Position::capture(Move m) const {
   assert(is_ok(m));
   // Castling is encoded as "king captures rook"
-  return (!empty(to_sq(m)) && type_of(m) != CASTLING) || type_of(m) == ENPASSANT;
+  return (!empty(to_sq(m)) && type_of(m) != CASTLING) || type_of(m) == EN_PASSANT;
 }
 
 inline Piece Position::captured_piece() const {

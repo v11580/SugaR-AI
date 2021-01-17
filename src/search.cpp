@@ -1,17 +1,17 @@
 /*
   SugaR, a UCI chess playing engine derived from Stockfish
-  Copyright (C) 2004-2020 The Stockfish developers (see AUTHORS file)
-  
+  Copyright (C) 2004-2021 The Stockfish developers (see AUTHORS file)
+
   SugaR is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   SugaR is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -88,7 +88,7 @@ namespace {
     return d > 14 ? 29 : 8 * d * d + 224 * d - 215;
   }
 
-  // Add a small random component to draw evaluations to avoid 3fold-blindness
+  // Add a small random component to draw evaluations to avoid 3-fold blindness
   Value value_draw(Thread* thisThread) {
     return VALUE_DRAW + Value(2 * (thisThread->nodes & 1) - 1);
   }
@@ -1352,8 +1352,20 @@ moves_loop: // When in check, search starts from here
           // Reduced depth of the next LMR search
           int lmrDepth = std::max(newDepth - reduction(improving, depth, moveCount), 0);
 
-          if (   !captureOrPromotion
-              && !givesCheck)
+          if (   captureOrPromotion
+              || givesCheck)
+          {
+              // Capture history based pruning when the move doesn't give check
+              if (   !givesCheck
+                  && lmrDepth < 1
+                  && captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] < 0)
+                  continue;
+
+              // SEE based pruning
+              if (!pos.see_ge(move, Value(-218) * depth)) // (~25 Elo)
+                  continue;
+          }
+          else
           {
               // Countermoves based pruning (~20 Elo)
               if (   lmrDepth < 4 + ((ss-1)->statScore > 0 || (ss-1)->moveCount == 1)
@@ -1373,18 +1385,6 @@ moves_loop: // When in check, search starts from here
 
               // Prune moves with negative SEE (~20 Elo)
               if (!pos.see_ge(move, Value(-(30 - std::min(lmrDepth, 18)) * lmrDepth * lmrDepth)))
-                  continue;
-          }
-          else
-          {
-              // Capture history based pruning when the move doesn't give check
-              if (   !givesCheck
-                  && lmrDepth < 1
-                  && captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] < 0)
-                  continue;
-
-              // SEE based pruning
-              if (!pos.see_ge(move, Value(-218) * depth)) // (~25 Elo)
                   continue;
           }
       }
@@ -1440,7 +1440,7 @@ moves_loop: // When in check, search starts from here
 
       // Check extension (~2 Elo)
       else if (    givesCheck
-               && (pos.is_discovery_check_on_king(~us, move) || pos.see_ge(move)))
+               && (pos.is_discovered_check_on_king(~us, move) || pos.see_ge(move)))
           extension = 1;
 
       // Last captures extension
@@ -1472,7 +1472,7 @@ moves_loop: // When in check, search starts from here
               || moveCountPruning
               || ss->staticEval + PieceValue[EG][pos.captured_piece()] <= alpha
               || cutNode
-              || (!PvNode && !formerPv && thisThread->captureHistory[movedPiece][to_sq(move)][type_of(pos.captured_piece())] < 4506)
+              || (!PvNode && !formerPv && captureHistory[movedPiece][to_sq(move)][type_of(pos.captured_piece())] < 4506)
               || thisThread->ttHitAverage < 432 * TtHitAverageResolution * TtHitAverageWindow / 1024))
       {
           Depth r = reduction(improving, depth, moveCount);
@@ -1505,7 +1505,14 @@ moves_loop: // When in check, search starts from here
           if (singularQuietLMR)
               r--;
 
-          if (!captureOrPromotion)
+          if (captureOrPromotion)
+          {
+              // Unless giving check, this capture is likely bad
+              if (   !givesCheck
+                  && ss->staticEval + PieceValue[EG][pos.captured_piece()] + 210 * depth <= alpha)
+                  r++;
+          }
+          else
           {
               // Increase reduction if ttMove is a capture (~5 Elo)
               if (ttCapture)
@@ -1539,14 +1546,13 @@ moves_loop: // When in check, search starts from here
                   r++;
 
               // Decrease/increase reduction for moves with a good/bad history (~30 Elo)
-              r -= ss->statScore / 14884;
-          }
-          else
-          {
-              // Unless giving check, this capture is likely bad
-              if (   !givesCheck
-                  && ss->staticEval + PieceValue[EG][pos.captured_piece()] + 210 * depth <= alpha)
-                  r++;
+              // If we are not in check use statScore, if we are in check
+              // use sum of main history and first continuation history with an offset
+              if (ss->inCheck)
+                  r -= (thisThread->mainHistory[us][from_to(move)]
+                     + (*contHist[0])[movedPiece][to_sq(move)] - 4333) / 16384;
+              else
+                  r -= ss->statScore / 14884;
           }
 
           Depth d = std::clamp(newDepth - r, 1, newDepth);
@@ -1854,7 +1860,7 @@ moves_loop: // When in check, search starts from here
           &&  futilityBase > -VALUE_KNOWN_WIN
           && !pos.advanced_pawn_push(move))
       {
-          assert(type_of(move) != ENPASSANT); // Due to !pos.advanced_pawn_push
+          assert(type_of(move) != EN_PASSANT); // Due to !pos.advanced_pawn_push
 
           // moveCount pruning
           if (moveCount > 2)

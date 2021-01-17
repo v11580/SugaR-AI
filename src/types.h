@@ -1,17 +1,17 @@
 /*
   SugaR, a UCI chess playing engine derived from Stockfish
-  Copyright (C) 2004-2020 The Stockfish developers (see AUTHORS file)
-  
+  Copyright (C) 2004-2021 The Stockfish developers (see AUTHORS file)
+
   SugaR is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   SugaR is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -113,7 +113,7 @@ constexpr int MAX_PLY   = 246;
 /// bit  6-11: origin square (from 0 to 63)
 /// bit 12-13: promotion piece type - 2 (from KNIGHT-2 to QUEEN-2)
 /// bit 14-15: special move flag: promotion (1), en passant (2), castling (3)
-/// NOTE: EN-PASSANT bit is set only when a pawn can be captured
+/// NOTE: en passant bit is set only when a pawn can be captured
 ///
 /// Special cases are MOVE_NONE and MOVE_NULL. We can sneak these in because in
 /// any normal move destination square is always different from origin square
@@ -127,7 +127,7 @@ enum Move : int {
 enum MoveType {
   NORMAL,
   PROMOTION = 1 << 14,
-  ENPASSANT = 2 << 14,
+  EN_PASSANT = 2 << 14,
   CASTLING  = 3 << 14
 };
 
