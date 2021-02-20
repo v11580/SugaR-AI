@@ -21,23 +21,14 @@ This distribution of SugaR consists of the following files:
   * Readme.md, the file you are currently reading.
 
   * Copying.txt, a text file containing the GNU General Public License version 3.
+  
+  * AUTHORS, a text file with the list of authors for the project
 
   * src, a subdirectory containing the full source code, including a Makefile
     that can be used to compile Stockfish on Unix-like systems.
 
   * a file with the .nnue extension, storing the neural network for the NNUE 
     evaluation. Binary distributions will have this file embedded.
-
-Note: to use the NNUE evaluation, the additional data file with neural network parameters
-needs to be available. Normally, this file is already embedded in the binary or it can be downloaded.
-The filename for the default (recommended) net can be found as the default
-value of the `EvalFile` UCI option, with the format `nn-[SHA256 first 12 digits].nnue`
-(for instance, `nn-c157e0a5755b.nnue`). This file can be downloaded from
-```
-https://tests.stockfishchess.org/api/nn/[filename]
-```
-replacing `[filename]` as needed.
-
 
 ## UCI options
 
@@ -50,8 +41,11 @@ Currently, Stockfish has the following UCI options:
   * #### Hash
     The size of the hash table in MB. It is recommended to set Hash after setting Threads.
 
-	* #### Ponder
-    Let Stockfish ponder its next move while the opponent is thinking.
+  * #### Clear Hash
+    Clear the hash table.
+
+  * #### Ponder
+    Let SugaR ponder its next move while the opponent is thinking.
 
   * #### MultiPV
     Output the N best lines (principal variations, PVs) when searching.
@@ -72,7 +66,7 @@ Currently, Stockfish has the following UCI options:
     An option handled by your GUI.
 
   * #### UCI_Chess960
-    An option handled by your GUI. If true, Stockfish will play Chess960.
+    An option handled by your GUI. If true, SugaR will play Chess960.
 
   * #### UCI_ShowWDL
     If enabled, show approximate WDL statistics as part of the engine output.
@@ -87,7 +81,7 @@ Currently, Stockfish has the following UCI options:
     This Elo rating has been calibrated at a time control of 60s+0.6s and anchored to CCRL 40/4.
 
   * #### Skill Level
-    Lower the Skill Level in order to make Stockfish play weaker (see also UCI_LimitStrength).
+    Lower the Skill Level in order to make SugaR play weaker (see also UCI_LimitStrength).
     Internally, MultiPV is enabled, and with a certain probability depending on the Skill Level a
     weaker move will be played.
 
@@ -129,7 +123,7 @@ Currently, Stockfish has the following UCI options:
     avoid losses on time in those cases.
 
   * #### Slow Mover
-    Lower values will make Stockfish take less time in games, higher values will
+    Lower values will make SugaR take less time in games, higher values will
     make it think longer.
 
   * #### nodestime
@@ -202,7 +196,7 @@ On CPUs supporting modern vector instructions (avx2 and similar), the NNUE evalu
 results in stronger playing strength, even if the nodes per second computed by the engine
 is somewhat lower (roughly 60% of nps is typical).
 
-Note that the NNUE evaluation depends on the Stockfish binary and the network parameter
+Note that the NNUE evaluation depends on the SugaR binary and the network parameter
 file (see EvalFile). Not every parameter file is compatible with a given Stockfish binary.
 The default value of the EvalFile UCI option is the name of a network that is guaranteed
 to be compatible with that binary.
@@ -234,11 +228,11 @@ the 50-move rule.
 
 ## Large Pages
 
-Stockfish supports large pages on Linux and Windows. Large pages make
+SugaR supports large pages on Linux and Windows. Large pages make
 the hash access more efficient, improving the engine speed, especially
 on large hash sizes. Typical increases are 5..10% in terms of nodes per
 second, but speed increases up to 30% have been measured. The support is
-automatic. Stockfish attempts to use large pages when available and
+automatic. SugaR attempts to use large pages when available and
 will fall back to regular memory allocation when this is not the case.
 
 ### Support on Linux
@@ -254,12 +248,12 @@ The use of large pages requires "Lock Pages in Memory" privilege. See
 on how to enable this privilege, then run [RAMMap](https://docs.microsoft.com/en-us/sysinternals/downloads/rammap)
 to double-check that large pages are used. We suggest that you reboot
 your computer after you have enabled large pages, because long Windows
-sessions suffer from memory fragmentation, which may prevent Stockfish
+sessions suffer from memory fragmentation, which may prevent SugaR
 from getting large pages: a fresh session is better in this regard.
 
-## Compiling Stockfish yourself from the sources
+## Compiling SugaR yourself from the sources
 
-Stockfish has support for 32 or 64-bit CPUs, certain hardware
+SugaR has support for 32 or 64-bit CPUs, certain hardware
 instructions, big-endian machines such as Power PC, and other platforms.
 
 On Unix-like systems, it should be easy to compile Stockfish
@@ -283,42 +277,12 @@ compiler you used to create your executable. These informations can
 be found by typing the following commands in a console:
 
 ```
-    ./stockfish compiler
+    ./sugar compiler
 ```
-
-## Understanding the code base and participating in the project
-
-Stockfish's improvement over the last couple of years has been a great
-community effort. There are a few ways to help contribute to its growth.
-
-### Donating hardware
-
-Improving Stockfish requires a massive amount of testing. You can donate
-your hardware resources by installing the [Fishtest Worker](https://github.com/glinscott/fishtest/wiki/Running-the-worker:-overview)
-and view the current tests on [Fishtest](https://tests.stockfishchess.org/tests).
-
-### Improving the code
-
-If you want to help improve the code, there are several valuable resources:
-
-* [In this wiki,](https://www.chessprogramming.org) many techniques used in
-Stockfish are explained with a lot of background information.
-
-* [The section on Stockfish](https://www.chessprogramming.org/Stockfish)
-describes many features and techniques used by Stockfish. However, it is
-generic rather than being focused on Stockfish's precise implementation.
-Nevertheless, a helpful resource.
-
-* The latest source can always be found on [GitHub](https://github.com/official-stockfish/Stockfish).
-Discussions about Stockfish take place in the [FishCooking](https://groups.google.com/forum/#!forum/fishcooking)
-group and engine testing is done on [Fishtest](https://tests.stockfishchess.org/tests).
-If you want to help improve Stockfish, please read this [guideline](https://github.com/glinscott/fishtest/wiki/Creating-my-first-test)
-first, where the basics of Stockfish development are explained.
-
 
 ## Terms of use
 
-Stockfish is free, and distributed under the **GNU General Public License version 3**
+SugaR is free, and distributed under the **GNU General Public License version 3**
 (GPL v3). Essentially, this means you are free to do almost exactly
 what you want with the program, including distributing it among your
 friends, making it available for download from your website, selling

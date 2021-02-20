@@ -23,16 +23,14 @@
 #include "misc.h"
 #include "polybook.h"
 #include "position.h"
+#include "psqt.h"
 #include "search.h"
+#include "syzygy/tbprobe.h"
 #include "thread.h"
 #include "tt.h"
 #include "uci.h"
 #include "experience.h"
-#include "syzygy/tbprobe.h"
 
-namespace PSQT {
-  void init();
-}
 
 int main(int argc, char* argv[]) {
 
