@@ -34,6 +34,8 @@
 
 using std::string;
 
+namespace Stockfish {
+
 namespace Zobrist {
 
   Key psq[PIECE_NB][SQUARE_NB];
@@ -1029,8 +1031,6 @@ Position& Position::set(const string& fenStr, bool isChess960, StateInfo* si, Th
       set_castling_right(c, rsq);
   }
 
-  set_state(st);
-
   // 4. En passant square.
   // Ignore if square is invalid or not on side to move relative rank 6.
   bool enpassant = false;
@@ -1073,6 +1073,7 @@ Position& Position::set(const string& fenStr, bool isChess960, StateInfo* si, Th
 
   chess960 = isChess960;
   thisThread = th;
+  set_state(st);
   st->accumulator.state[WHITE] = Eval::NNUE::INIT;
   st->accumulator.state[BLACK] = Eval::NNUE::INIT;
 
@@ -1188,7 +1189,7 @@ Position& Position::set(const string& code, Color c, StateInfo* si) {
 /// Position::fen() returns a FEN representation of the position. In case of
 /// Chess960 the Shredder-FEN notation is used. This is mainly a debugging function.
 
-const string Position::fen() const {
+string Position::fen() const {
 
   int emptyCnt;
   std::ostringstream ss;
@@ -1887,7 +1888,7 @@ bool Position::see_ge(Move m, Value threshold) const {
           if ((swap = PawnValueMg - swap) < res)
               break;
 
-          occupied ^= lsb(bb);
+          occupied ^= least_significant_square_bb(bb);
           attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
       }
 
@@ -1896,7 +1897,7 @@ bool Position::see_ge(Move m, Value threshold) const {
           if ((swap = KnightValueMg - swap) < res)
               break;
 
-          occupied ^= lsb(bb);
+          occupied ^= least_significant_square_bb(bb);
       }
 
       else if ((bb = stmAttackers & pieces(BISHOP)))
@@ -1904,7 +1905,7 @@ bool Position::see_ge(Move m, Value threshold) const {
           if ((swap = BishopValueMg - swap) < res)
               break;
 
-          occupied ^= lsb(bb);
+          occupied ^= least_significant_square_bb(bb);
           attackers |= attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN);
       }
 
@@ -1913,7 +1914,7 @@ bool Position::see_ge(Move m, Value threshold) const {
           if ((swap = RookValueMg - swap) < res)
               break;
 
-          occupied ^= lsb(bb);
+          occupied ^= least_significant_square_bb(bb);
           attackers |= attacks_bb<ROOK>(to, occupied) & pieces(ROOK, QUEEN);
       }
 
@@ -1922,7 +1923,7 @@ bool Position::see_ge(Move m, Value threshold) const {
           if ((swap = QueenValueMg - swap) < res)
               break;
 
-          occupied ^= lsb(bb);
+          occupied ^= least_significant_square_bb(bb);
           attackers |=  (attacks_bb<BISHOP>(to, occupied) & pieces(BISHOP, QUEEN))
                       | (attacks_bb<ROOK  >(to, occupied) & pieces(ROOK  , QUEEN));
       }
@@ -2118,3 +2119,5 @@ bool Position::pos_is_ok() const {
 
   return true;
 }
+
+} // namespace Stockfish

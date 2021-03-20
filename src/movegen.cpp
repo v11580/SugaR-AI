@@ -21,6 +21,8 @@
 #include "movegen.h"
 #include "position.h"
 
+namespace Stockfish {
+
 namespace {
 
   template<GenType Type, Direction D>
@@ -61,7 +63,7 @@ namespace {
     Bitboard pawnsOn7    = pos.pieces(Us, PAWN) &  TRank7BB;
     Bitboard pawnsNotOn7 = pos.pieces(Us, PAWN) & ~TRank7BB;
 
-    Bitboard enemies = (Type == EVASIONS ? pos.pieces(Them) & target:
+    Bitboard enemies = (Type == EVASIONS ? pos.checkers():
                         Type == CAPTURES ? target : pos.pieces(Them));
 
     // Single and double pawn pushes, no promotions
@@ -180,17 +182,12 @@ namespace {
 
     Bitboard bb = piecesToMove & pos.pieces(Pt);
 
-    if (!bb)
-        return moveList;
-
-    [[maybe_unused]] const Bitboard checkSquares = pos.check_squares(Pt);
-
     while (bb) {
         Square from = pop_lsb(&bb);
 
         Bitboard b = attacks_bb<Pt>(from, pos.pieces()) & target;
         if constexpr (Checks)
-            b &= checkSquares;
+            b &= pos.check_squares(Pt);
 
         while (b)
             *moveList++ = make_move(from, pop_lsb(&b));
@@ -221,11 +218,8 @@ namespace {
             target = ~pos.pieces();
             break;
         case EVASIONS:
-        {
-            Square checksq = lsb(pos.checkers());
-            target = between_bb(pos.square<KING>(Us), checksq) | checksq;
+            target = between_bb(pos.square<KING>(Us), lsb(pos.checkers())) | pos.checkers();
             break;
-        }
         case NON_EVASIONS:
             target = ~pos.pieces(Us);
             break;
@@ -362,3 +356,5 @@ ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList) {
 
   return moveList;
 }
+
+} // namespace Stockfish

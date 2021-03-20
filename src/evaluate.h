@@ -23,6 +23,8 @@
 
 #include "types.h"
 
+namespace Stockfish {
+
 class Position;
 
 namespace Eval {
@@ -36,7 +38,7 @@ namespace Eval {
   // The default net name MUST follow the format nn-[SHA256 first 12 digits].nnue
   // for the build process (profile-build and fishtest) to work. Do not change the
   // name of the macro, as it is used in the Makefile.
-  #define EvalFileDefaultName   "nn-0e698aa9eb8b.nnue"
+  #define EvalFileDefaultName   "nn-62ef826d1a6d.nnue"
 
   namespace NNUE {
 
@@ -48,5 +50,7 @@ namespace Eval {
   } // namespace NNUE
 
 } // namespace Eval
+
+} // namespace Stockfish
 
 #endif // #ifndef EVALUATE_H_INCLUDED

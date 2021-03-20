@@ -39,7 +39,8 @@
 //This will disable embedding the default net
 #define NNUE_EMBEDDING_OFF
 
-// Macro to embed the default NNUE file data in the engine binary (using incbin.h, by Dale Weiler).
+// Macro to embed the default efficiently updatable neural network (NNUE) file
+// data in the engine binary (using incbin.h, by Dale Weiler).
 // This macro invocation will declare the following three variables
 //     const unsigned char        gEmbeddedNNUEData[];  // a pointer to the embedded data
 //     const unsigned char *const gEmbeddedNNUEEnd;     // a marker to the end
@@ -55,7 +56,9 @@
 
 
 using namespace std;
-using namespace Eval::NNUE;
+using namespace Stockfish::Eval::NNUE;
+
+namespace Stockfish {
 
 namespace Eval {
 
@@ -1151,3 +1154,5 @@ std::string Eval::trace(const Position& pos) {
 
   return ss.str();
 }
+
+} // namespace Stockfish

@@ -39,6 +39,9 @@
 
 #include "experience.h"
 
+
+namespace Stockfish {
+
 namespace Search {
 
   LimitsType Limits;
@@ -239,7 +242,6 @@ void MainThread::search() {
   Eval::NNUE::verify();
 
   Move bookMove = MOVE_NONE;
-
   if (rootMoves.empty())
   {
       rootMoves.emplace_back(MOVE_NONE);
@@ -455,10 +457,10 @@ void MainThread::search() {
 
   Thread* bestThread = this;
 
-  if (    int(Options["MultiPV"]) == 1
+  if (   int(Options["MultiPV"]) == 1
       && !Limits.depth
       && !(Skill(Options["Skill Level"]).enabled() || int(Options["UCI_LimitStrength"]))
-      &&  rootMoves[0].pv[0] != MOVE_NONE)
+      && rootMoves[0].pv[0] != MOVE_NONE)
       bestThread = Threads.get_best_thread();
 
   if (    bookMove == MOVE_NONE
@@ -677,7 +679,7 @@ void Thread::search() {
           while (true)
           {
               Depth adjustedDepth = std::max(1, rootDepth - failedHighCnt - searchAgainCounter);
-              bestValue = ::search<PV>(rootPos, ss, alpha, beta, adjustedDepth, false);
+              bestValue = Stockfish::search<PV>(rootPos, ss, alpha, beta, adjustedDepth, false);
 
               // Bring the best move to the front. It is critical that sorting
               // is done with a stable algorithm because all the values but the
@@ -1886,15 +1888,13 @@ moves_loop: // When in check, search starts from here
 
       moveCount++;
 
-      // Futility pruning
+      // Futility pruning and moveCount pruning
       if (    bestValue > VALUE_TB_LOSS_IN_MAX_PLY
           && !givesCheck
           &&  futilityBase > -VALUE_KNOWN_WIN
-          && !pos.advanced_pawn_push(move))
+          &&  type_of(move) != PROMOTION)
       {
-          assert(type_of(move) != EN_PASSANT); // Due to !pos.advanced_pawn_push
 
-          // moveCount pruning
           if (moveCount > 2)
               continue;
 
@@ -2246,7 +2246,7 @@ string UCI::pv(const Position& pos, Depth depth, Value alpha, Value beta) {
          << " multipv "  << i + 1
          << " score "    << UCI::value(v);
 
-      if (Options["ShowWDL"])
+      if (Options["UCI_ShowWDL"])
           ss << UCI::wdl(v, pos.game_ply());
 
       if (!tb && i == pvIdx)
@@ -2347,3 +2347,5 @@ void Tablebases::rank_root_moves(Position& pos, Search::RootMoves& rootMoves) {
             m.tbRank = 0;
     }
 }
+
+} // namespace Stockfish

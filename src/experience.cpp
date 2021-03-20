@@ -34,6 +34,7 @@
 #include "experience.h"
 
 using namespace std;
+using namespace Stockfish;
 
 namespace Experience
 {

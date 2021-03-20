@@ -31,6 +31,7 @@
 #include "uci.h"
 #include "experience.h"
 
+using namespace Stockfish;
 
 int main(int argc, char* argv[]) {
 

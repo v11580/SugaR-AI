@@ -28,6 +28,7 @@ PolyBook polybook;  // global PolyBook
 PolyBook polybook2;  // global second PolyBook
 
 using namespace std;
+using namespace Stockfish;
 
 // Random numbers from PolyGlot, used to compute book hash keys
 const union {

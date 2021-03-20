@@ -36,6 +36,8 @@
 
 using namespace std;
 
+namespace Stockfish {
+
 extern vector<string> setup_bench(const Position&, istream&);
 
 namespace {
@@ -285,7 +287,7 @@ void UCI::loop(int argc, char* argv[]) {
       else if (token == "compiler") sync_cout << compiler_info() << sync_endl;
       else if (argc > 1 && token == "defrag")   Experience::defrag(argc, argv);
       else if (argc > 1 && token == "merge")    Experience::merge(argc, argv);
-      else
+      else if (!token.empty() && token[0] != '#')
           sync_cout << "Unknown command: " << cmd << sync_endl;
 
   } while (token != "quit" && argc == 1); // Command line args are one-shot
@@ -379,3 +381,5 @@ Move UCI::to_move(const Position& pos, string& str) {
 
   return MOVE_NONE;
 }
+
+} // namespace Stockfish
