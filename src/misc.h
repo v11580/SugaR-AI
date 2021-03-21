@@ -52,7 +52,6 @@ namespace SysInfo
 }
 
 void prefetch(void* addr);
-void prefetch2(void* addr);
 void start_logger(const std::string& fname);
 void* std_aligned_alloc(size_t alignment, size_t size);
 void std_aligned_free(void* ptr);

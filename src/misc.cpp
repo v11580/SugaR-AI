@@ -27,18 +27,17 @@
 #endif
 
 #include <windows.h>
-#include <tchar.h>
+#include "VersionHelpers.h"
+
 // The needed Windows API for processor groups could be missed from old Windows
 // versions, so instead of calling them directly (forcing the linker to resolve
 // the calls at compile time), try to load them at runtime. To do this we need
 // first to define the corresponding function pointers.
 extern "C" {
-typedef bool(WINAPI *fun1_t)(LOGICAL_PROCESSOR_RELATIONSHIP,
+typedef bool(*fun1_t)(LOGICAL_PROCESSOR_RELATIONSHIP,
                       PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, PDWORD);
-typedef bool(WINAPI *fun2_t)(USHORT, PGROUP_AFFINITY);
-typedef bool(WINAPI *fun3_t)(HANDLE, CONST GROUP_AFFINITY*, PGROUP_AFFINITY);
-
-#include "VersionHelpers.h"
+typedef bool(*fun2_t)(USHORT, PGROUP_AFFINITY);
+typedef bool(*fun3_t)(HANDLE, CONST GROUP_AFFINITY*, PGROUP_AFFINITY);
 }
 #endif
 
@@ -246,7 +245,7 @@ string engine_info(bool to_uci) {
   string month, day, year;
   stringstream ss, date(__DATE__); // From compiler, format is "Sep 21 2008"
 
-  ss << "SugaR AI " << Version << setfill('0');
+  ss << "SugaR AI 1.60 " << Version << setfill('0');
 
   ss << (to_uci  ? "\nid author ": " by ")
      << "Stockfish Team, Marco Zerbinati, Khalid Omar";

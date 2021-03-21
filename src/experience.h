@@ -24,7 +24,7 @@
 
 using namespace std;
 
-#define MIN_EXP_DEPTH       4
+#define MIN_EXP_DEPTH       ((Depth)4)
 
 namespace Experience
 {
@@ -114,6 +114,8 @@ namespace Experience
 
     void defrag(int argc, char* argv[]);
     void merge(int argc, char* argv[]);
+    void show_exp(Stockfish::Position& pos, bool extended);
+    void convert_compact_pgn(int argc, char* argv[]);
 
     void pause_learning();
     void resume_learning();

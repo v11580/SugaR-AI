@@ -306,6 +306,16 @@ void MainThread::search() {
                           }
 
                           nextPosExpEx = Experience::probe(rootPos.key());
+
+                          //Find best next experience move (shallow search)
+                          const Experience::ExpEntryEx* t = nextPosExpEx ? nextPosExpEx->next : nullptr;
+                          while (t)
+                          {
+                              if (t->compare(nextPosExpEx))
+                                  nextPosExpEx = t;
+
+                              t = t->next;
+                          }
                       }
 
                       if (exp.size())
@@ -333,7 +343,7 @@ void MainThread::search() {
                   };
 
                   //Find best experience move (algorithm is similar to Thread::get_best_thread())
-                  //Step 1: Find minimum score of all threads
+                  //Step 1: Find minimum score of all exp moves
                   Value minExpectedScore = VALUE_NONE;
                   tempExpEx = expEx;
                   while (tempExpEx)
