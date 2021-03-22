@@ -158,7 +158,7 @@ namespace {
         {
             assert(rank_of(pos.ep_square()) == relative_rank(Us, RANK_6));
 
-            // An en passant capture cannot resolve a discovered check.
+            // An en passant capture cannot resolve a discovered check
             if (Type == EVASIONS && (target & (pos.ep_square() + Up)))
                 return moveList;
 
@@ -175,7 +175,7 @@ namespace {
   }
 
 
-  template<Color Us, PieceType Pt, bool Checks>
+  template<PieceType Pt, bool Checks>
   ExtMove* generate_moves(const Position& pos, ExtMove* moveList, Bitboard piecesToMove, Bitboard target) {
 
     static_assert(Pt != KING && Pt != PAWN, "Unsupported piece type in generate_moves()");
@@ -218,7 +218,7 @@ namespace {
             target = ~pos.pieces();
             break;
         case EVASIONS:
-            target = between_bb(pos.square<KING>(Us), lsb(pos.checkers())) | pos.checkers();
+            target = between_bb(pos.square<KING>(Us), lsb(pos.checkers()));
             break;
         case NON_EVASIONS:
             target = ~pos.pieces(Us);
@@ -226,10 +226,10 @@ namespace {
     }
 
     moveList = generate_pawn_moves<Us, Type>(pos, moveList, target);
-    moveList = generate_moves<Us, KNIGHT, Checks>(pos, moveList, piecesToMove, target);
-    moveList = generate_moves<Us, BISHOP, Checks>(pos, moveList, piecesToMove, target);
-    moveList = generate_moves<Us,   ROOK, Checks>(pos, moveList, piecesToMove, target);
-    moveList = generate_moves<Us,  QUEEN, Checks>(pos, moveList, piecesToMove, target);
+    moveList = generate_moves<KNIGHT, Checks>(pos, moveList, piecesToMove, target);
+    moveList = generate_moves<BISHOP, Checks>(pos, moveList, piecesToMove, target);
+    moveList = generate_moves<  ROOK, Checks>(pos, moveList, piecesToMove, target);
+    moveList = generate_moves< QUEEN, Checks>(pos, moveList, piecesToMove, target);
 
     if (Type != QUIET_CHECKS && Type != EVASIONS)
     {
@@ -329,7 +329,7 @@ ExtMove* generate<EVASIONS>(const Position& pos, ExtMove* moveList) {
   if (more_than_one(pos.checkers()))
       return moveList; // Double check, only a king move can save the day
 
-  // Generate blocking evasions or captures of the checking piece
+  // Generate blocking interpositions or captures of the checking piece
   return us == WHITE ? generate_all<WHITE, EVASIONS>(pos, moveList)
                      : generate_all<BLACK, EVASIONS>(pos, moveList);
 }
