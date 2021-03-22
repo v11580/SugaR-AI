@@ -45,10 +45,8 @@ void on_hash_size(const Option& o) { TT.resize(size_t(o)); }
 void on_logger(const Option& o) { start_logger(o); }
 void on_threads(const Option& o) { Threads.set(size_t(o)); }
 void on_tb_path(const Option& o) { Tablebases::init(o); }
-void on_book_file(const Option& o) { polybook.init(o); }
-void on_book_file2(const Option& o) { polybook2.init(o); }
-void on_best_book_move(const Option& o) { polybook.set_best_book_move(o); }
-void on_book_depth(const Option& o) { polybook.set_book_depth(o); }
+void on_book1_file(const Option& o) { polybook[0].init(o); }
+void on_book2_file(const Option& o) { polybook[1].init(o); }
 void on_exp_enabled(const Option& /*o*/) { Experience::init(); }
 void on_exp_file(const Option& /*o*/) { Experience::init(); }
 void on_use_NNUE(const Option& ) { Eval::NNUE::init(); }
@@ -68,41 +66,44 @@ void init(OptionsMap& o) {
 
   constexpr int MaxHashMB = Is64Bit ? 33554432 : 2048;
 
-  o["Debug Log File"]        << Option("", on_logger);
-  o["Contempt"]              << Option(24, -100, 100);
-  o["Analysis Contempt"]     << Option("Both var Off var White var Black var Both", "Both");
-  o["Threads"]               << Option(1, 1, 512, on_threads);
-  o["Hash"]                  << Option(16, 1, MaxHashMB, on_hash_size);
-  o["Clear Hash"]            << Option(on_clear_hash);
-  o["Ponder"]                << Option(false);
-  o["MultiPV"]               << Option(1, 1, 500);
-  o["Skill Level"]           << Option(20, 0, 20);
-  o["Move Overhead"]         << Option(10, 0, 5000);
+  o["Debug Log File"]            << Option("", on_logger);
+  o["Contempt"]                  << Option(24, -100, 100);
+  o["Analysis Contempt"]         << Option("Both var Off var White var Black var Both", "Both");
+  o["Threads"]                   << Option(1, 1, 512, on_threads);
+  o["Hash"]                      << Option(16, 1, MaxHashMB, on_hash_size);
+  o["Clear Hash"]                << Option(on_clear_hash);
+  o["Ponder"]                    << Option(false);
+  o["MultiPV"]                   << Option(1, 1, 500);
+  o["Skill Level"]               << Option(20, 0, 20);
+  o["Move Overhead"]             << Option(10, 0, 5000);
   o["Minimum Thinking Time"]     << Option( 0, 0, 5000);
-  o["Slow Mover"]            << Option(100, 10, 1000);
-  o["nodestime"]             << Option(0, 0, 10000);
-  o["UCI_Chess960"]          << Option(false);
-  o["UCI_AnalyseMode"]       << Option(false);
-  o["UCI_LimitStrength"]     << Option(false);
-  o["UCI_Elo"]               << Option(1350, 1350, 2850);
-  o["UCI_ShowWDL"]           << Option(false);
-  o["SyzygyPath"]            << Option("<empty>", on_tb_path);
-  o["SyzygyProbeDepth"]      << Option(1, 1, 100);
-  o["Syzygy50MoveRule"]      << Option(true);
-  o["SyzygyProbeLimit"]      << Option(7, 0, 7);
-  o["OwnBook"]                   << Option(false); 
-  o["BookFile"]                  << Option("<empty>", on_book_file);
-  o["BookFile2"]                 << Option("<empty>", on_book_file2);
-  o["BestBookMove"]              << Option(false, on_best_book_move);
-  o["BookDepth"]                 << Option(300, 1, 350, on_book_depth);
+  o["Slow Mover"]                << Option(100, 10, 1000);
+  o["nodestime"]                 << Option(0, 0, 10000);
+  o["UCI_Chess960"]              << Option(false);
+  o["UCI_AnalyseMode"]           << Option(false);
+  o["UCI_LimitStrength"]         << Option(false);
+  o["UCI_Elo"]                   << Option(1350, 1350, 2850);
+  o["UCI_ShowWDL"]               << Option(false);
+  o["SyzygyPath"]                << Option("<empty>", on_tb_path);
+  o["SyzygyProbeDepth"]          << Option(1, 1, 100);
+  o["Syzygy50MoveRule"]          << Option(true);
+  o["SyzygyProbeLimit"]          << Option(7, 0, 7);
+  o["Book1"]                     << Option(false);
+  o["Book1 File"]                << Option("<empty>", on_book1_file);
+  o["Book1 BestBookMove"]        << Option(true);
+  o["Book1 Depth"]               << Option(100, 1, 350);
+  o["Book2"]                     << Option(false);
+  o["Book2 File"]                << Option("<empty>", on_book2_file);
+  o["Book2 BestBookMove"]        << Option(true);
+  o["Book2 Depth"]               << Option(100, 1, 350);
   o["Experience Enabled"]        << Option(true, on_exp_enabled);
   o["Experience File"]           << Option("SugaR.exp", on_exp_file);
   o["Experience Readonly"]       << Option(false);
   o["Experience Book"]           << Option(false);
   o["Experience Book Best Move"] << Option(true);
   o["Experience Book Max Moves"] << Option(16, 1, 100);
-  o["Use NNUE"]              << Option(true, on_use_NNUE);
-  o["EvalFile"]              << Option(EvalFileDefaultName, on_eval_file);
+  o["Use NNUE"]                  << Option(true, on_use_NNUE);
+  o["EvalFile"]                  << Option(EvalFileDefaultName, on_eval_file);
 }
 
 
