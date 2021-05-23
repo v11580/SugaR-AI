@@ -103,8 +103,9 @@ void init(OptionsMap& o) {
   o["Experience Book Best Move"]       << Option(true);
   o["Experience Book Eval Importance"] << Option(5, 0, 10);
   o["Experience Book Max Moves"]       << Option(16, 1, 100);
-  o["Use NNUE"]                        << Option(true, on_use_NNUE);
   o["EvalFile"]                        << Option(EvalFileDefaultName, on_eval_file);
+  o["Use NNUE Evaluation"]             << Option(true, on_use_NNUE);
+  o["Use Classical Evaluation"]        << Option(true);
 }
 
 

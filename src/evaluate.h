@@ -30,10 +30,12 @@ class Position;
 
 namespace Eval {
 
+  void init(bool verify);
   std::string trace(const Position& pos);
   Value evaluate(const Position& pos);
 
   extern bool useNNUE;
+  extern bool useClassical;
   extern std::string eval_file_loaded;
 
   // The default net name MUST follow the format nn-[SHA256 first 12 digits].nnue
