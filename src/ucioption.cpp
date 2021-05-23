@@ -74,9 +74,9 @@ void init(OptionsMap& o) {
   o["Clear Hash"]                      << Option(on_clear_hash);
   o["Ponder"]                          << Option(false);
   o["MultiPV"]                         << Option(1, 1, 500);
-o["Minimum Thinking Time"]             << Option(5, 0, 5000);
   o["Skill Level"]                     << Option(20, 0, 20);
   o["Move Overhead"]                   << Option(10, 0, 5000);
+  o["Minimum Thinking Time"]           << Option(5, 0, 5000);
   o["Slow Mover"]                      << Option(100, 10, 1000);
   o["nodestime"]                       << Option(0, 0, 10000);
   o["UCI_Chess960"]                    << Option(false);
