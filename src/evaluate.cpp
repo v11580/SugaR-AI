@@ -63,6 +63,7 @@ namespace Stockfish {
 namespace Eval {
 
   bool useNNUE;
+  bool useClassical;
   string eval_file_loaded = "None";
 
   /// NNUE::init() tries to load a NNUE network at startup time, or when the engine
@@ -75,11 +76,14 @@ namespace Eval {
 
   void NNUE::init() {
 
-    useNNUE = Options["Use NNUE"];
+    useNNUE = Options["Use NNUE Evaluation"];
     if (!useNNUE)
         return;
 
     string eval_file = string(Options["EvalFile"]);
+
+    if (eval_file_loaded == eval_file)
+        return;
 
 #if !defined(NNUE_EMBEDDING_OFF)
     #if defined(DEFAULT_NNUE_DIRECTORY)
@@ -168,11 +172,6 @@ namespace Eval {
 
         exit(EXIT_FAILURE);
     }
-
-    if (useNNUE)
-        sync_cout << "info string NNUE evaluation using " << eval_file << " enabled" << sync_endl;
-    else
-        sync_cout << "info string classical evaluation enabled" << sync_endl;
   }
 }
 
@@ -1107,12 +1106,43 @@ make_v:
 
 } // namespace Eval
 
+void Eval::init(bool verify)
+{
+    NNUE::init(); //This will also initialize 'useNNUE' variable
+    useClassical = Options["Use Classical Evaluation"];
+
+    if (verify)
+    {
+        if(useNNUE)
+            NNUE::verify();
+
+        if (!useNNUE && !useClassical)
+        {
+            sync_cout << "info string ERROR: At least one of NNUE or Classical evaluation should be enabled for the engine to continue" << sync_endl;
+            exit(EXIT_FAILURE);
+        }
+
+        std::stringstream ss;
+
+        if (useNNUE && useClassical)
+            ss << "info string Classical and NNUE evaluation (using " << Eval::eval_file_loaded << ") are enabled";
+        else if (useNNUE)
+            ss << "info string NNUE evaluation (using " << Eval::eval_file_loaded << ") is enabled";
+        else if (useClassical)
+            ss << "info string Classical evaluation enabled";
+        else
+            assert(false); //Should never reach here!
+
+        sync_cout << ss.str() << sync_endl;
+    }
+}
 
 /// evaluate() is the evaluator for the outer world. It returns a static
 /// evaluation of the position from the point of view of the side to move.
 
 Value Eval::evaluate(const Position& pos) {
 
+  assert(Eval::useClassical || Eval::useNNUE);
   Value v;
 
   if (!Eval::useNNUE)
@@ -1133,30 +1163,37 @@ Value Eval::evaluate(const Position& pos) {
          return nnue;
       };
 
-      // If there is PSQ imbalance we use the classical eval. We also introduce
-      // a small probability of using the classical eval when PSQ imbalance is small.
-      Value psq = Value(abs(eg_value(pos.psq_score())));
-      int   r50 = 16 + pos.rule50_count();
-      bool  largePsq = psq * 16 > (NNUEThreshold1 + pos.non_pawn_material() / 64) * r50;
-      bool  classical = largePsq;
-
-      // Use classical evaluation for really low piece endgames.
-      // One critical case is the draw for bishop + A/H file pawn vs naked king.
-      bool lowPieceEndgame =   pos.non_pawn_material() == BishopValueMg
-                            || (pos.non_pawn_material() < 2 * RookValueMg && pos.count<PAWN>() < 2);
-
-      v = classical || lowPieceEndgame ? Evaluation<NO_TRACE>(pos).value()
-                                       : adjusted_NNUE();
-
-      // If the classical eval is small and imbalance large, use NNUE nevertheless.
-      // For the case of opposite colored bishops, switch to NNUE eval with small
-      // probability if the classical eval is less than the threshold.
-      if (    largePsq
-          && !lowPieceEndgame
-          && (   abs(v) * 16 < NNUEThreshold2 * r50
-              || (   pos.opposite_bishops()
-                  && abs(v) * 16 < (NNUEThreshold1 + pos.non_pawn_material() / 64) * r50)))
+      if (!Eval::useClassical)
+      {
           v = adjusted_NNUE();
+      }
+      else
+      {
+          // If there is PSQ imbalance we use the classical eval. We also introduce
+          // a small probability of using the classical eval when PSQ imbalance is small.
+          Value psq = Value(abs(eg_value(pos.psq_score())));
+          int   r50 = 16 + pos.rule50_count();
+          bool  largePsq = psq * 16 > (NNUEThreshold1 + pos.non_pawn_material() / 64) * r50;
+          bool  classical = largePsq;
+          
+          // Use classical evaluation for really low piece endgames.
+          // One critical case is the draw for bishop + A/H file pawn vs naked king.
+          bool lowPieceEndgame =   pos.non_pawn_material() == BishopValueMg
+                                || (pos.non_pawn_material() < 2 * RookValueMg && pos.count<PAWN>() < 2);
+          
+          v = classical || lowPieceEndgame ? Evaluation<NO_TRACE>(pos).value()
+                                           : adjusted_NNUE();
+          
+          // If the classical eval is small and imbalance large, use NNUE nevertheless.
+          // For the case of opposite colored bishops, switch to NNUE eval with small
+          // probability if the classical eval is less than the threshold.
+          if (    largePsq
+              && !lowPieceEndgame
+              && (   abs(v) * 16 < NNUEThreshold2 * r50
+                  || (   pos.opposite_bishops()
+                      && abs(v) * 16 < (NNUEThreshold1 + pos.non_pawn_material() / 64) * r50)))
+              v = adjusted_NNUE();
+      }
   }
 
   // Damp down the evaluation linearly when shuffling

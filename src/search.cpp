@@ -193,7 +193,7 @@ void MainThread::search() {
   Time.init(Limits, us, rootPos.game_ply());
   TT.new_search();
 
-  Eval::NNUE::verify();
+  Eval::init(true);
 
   Move bookMove = MOVE_NONE;
   if (rootMoves.empty())
