@@ -125,8 +125,7 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
   for (int i = 0; i < ClusterSize; ++i)
       if (tte[i].key16 == key16 || !tte[i].depth8)
       {
-          if ((tte[i].genBound8 & 0xF8) != generation8 && tte[i].depth8)
-              tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & 0x7)); // Refresh
+          tte[i].genBound8 = uint8_t(generation8 | (tte[i].genBound8 & (GENERATION_DELTA - 1))); // Refresh
 
           return found = (bool)tte[i].depth8, &tte[i];
       }

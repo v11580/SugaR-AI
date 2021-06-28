@@ -67,8 +67,6 @@ void init(OptionsMap& o) {
   constexpr int MaxHashMB = Is64Bit ? 33554432 : 2048;
 
   o["Debug Log File"]                  << Option("", on_logger);
-  o["Contempt"]                        << Option(24, -100, 100);
-  o["Analysis Contempt"]               << Option("Both var Off var White var Black var Both", "Both");
   o["Threads"]                         << Option(1, 1, 512, on_threads);
   o["Hash"]                            << Option(16, 1, MaxHashMB, on_hash_size);
   o["Clear Hash"]                      << Option(on_clear_hash);
@@ -76,7 +74,6 @@ void init(OptionsMap& o) {
   o["MultiPV"]                         << Option(1, 1, 500);
   o["Skill Level"]                     << Option(20, 0, 20);
   o["Move Overhead"]                   << Option(10, 0, 5000);
-  o["Minimum Thinking Time"]           << Option(5, 0, 5000);
   o["Slow Mover"]                      << Option(100, 10, 1000);
   o["nodestime"]                       << Option(0, 0, 10000);
   o["UCI_Chess960"]                    << Option(false);
@@ -103,9 +100,8 @@ void init(OptionsMap& o) {
   o["Experience Book Best Move"]       << Option(true);
   o["Experience Book Eval Importance"] << Option(5, 0, 10);
   o["Experience Book Max Moves"]       << Option(16, 1, 100);
+  o["Use NNUE"]                        << Option(true, on_use_NNUE);
   o["EvalFile"]                        << Option(EvalFileDefaultName, on_eval_file);
-  o["Use NNUE Evaluation"]             << Option(true, on_use_NNUE);
-  o["Use Classical Evaluation"]        << Option(true);
 }
 
 

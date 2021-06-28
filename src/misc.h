@@ -109,6 +109,12 @@ T* align_ptr_up(T* ptr)
   return reinterpret_cast<T*>(reinterpret_cast<char*>((ptrint + (Alignment - 1)) / Alignment * Alignment));
 }
 
+
+// IsLittleEndian : true if and only if the binary is compiled on a little endian machine
+static inline const union { uint32_t i; char c[4]; } Le = { 0x01020304 };
+static inline const bool IsLittleEndian = (Le.c[0] == 4);
+
+
 template <typename T>
 class ValueListInserter {
 public:

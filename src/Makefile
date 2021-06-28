@@ -61,9 +61,11 @@ endif
 # ----------------------------------------------------------------------------
 #
 # debug = yes/no      --- -DNDEBUG         --- Enable/Disable debug mode
-# sanitize = undefined/thread/no (-fsanitize )
+# sanitize = none/<sanitizer> ... (-fsanitize )
 #                     --- ( undefined )    --- enable undefined behavior checks
-#                     --- ( thread    )    --- enable threading error  checks
+#                     --- ( thread    )    --- enable threading error checks
+#                     --- ( address   )    --- enable memory access checks
+#                     --- ...etc...        --- see compiler documentation for supported sanitizers
 # optimize = yes/no   --- (-O3/-fast etc.) --- Enable/Disable optimizations
 # arch = (name)       --- (-arch)          --- Target architecture
 # bits = 64/32        --- -DIS_64BIT       --- 64-/32-bit operating system
@@ -84,6 +86,10 @@ endif
 # Note that Makefile is space sensitive, so when adding new architectures
 # or modifying existing flags, you have to make sure there are no extra spaces
 # at the end of the line for flag values.
+#
+# Example of use for these flags:
+# make build ARCH=x86-64-avx512 debug=on sanitize="address undefined"
+
 
 ### 2.1. General and architecture defaults
 
@@ -105,7 +111,7 @@ endif
 
 optimize = yes
 debug = no
-sanitize = no
+sanitize = none
 bits = 64
 prefetch = no
 popcnt = no
@@ -473,9 +479,9 @@ else
 endif
 
 ### 3.2.2 Debugging with undefined behavior sanitizers
-ifneq ($(sanitize),no)
-        CXXFLAGS += -g3 -fsanitize=$(sanitize)
-        LDFLAGS += -fsanitize=$(sanitize)
+ifneq ($(sanitize),none)
+        CXXFLAGS += -g3 $(addprefix -fsanitize=,$(sanitize))
+        LDFLAGS += $(addprefix -fsanitize=,$(sanitize))
 endif
 
 ### 3.3 Optimization
@@ -658,7 +664,7 @@ endif
 
 help:
 	@echo ""
-	@echo "To compile stockfish, type: "
+	@echo "To compile sugar, type: "
 	@echo ""
 	@echo "make target ARCH=arch [COMP=compiler] [COMPCXX=cxx]"
 	@echo ""
@@ -792,7 +798,10 @@ objclean:
 profileclean:
 	@rm -rf profdir
 	@rm -f bench.txt *.gcda *.gcno ./syzygy/*.gcda ./nnue/*.gcda ./nnue/features/*.gcda *.s
-	@rm -f stockfish.profdata *.profraw
+	@rm -f sugar.profdata *.profraw
+	@rm -f sugar.exe.lto_wrapper_args
+	@rm -f sugar.exe.ltrans.out
+	@rm -f ./-lstdc++.res
 
 default:
 	help
@@ -835,7 +844,6 @@ config-sanity: net
 	@echo "Testing config sanity. If this fails, try 'make help' ..."
 	@echo ""
 	@test "$(debug)" = "yes" || test "$(debug)" = "no"
-	@test "$(sanitize)" = "undefined" || test "$(sanitize)" = "thread" || test "$(sanitize)" = "address" || test "$(sanitize)" = "no"
 	@test "$(optimize)" = "yes" || test "$(optimize)" = "no"
 	@test "$(SUPPORTED_ARCH)" = "true"
 	@test "$(arch)" = "any" || test "$(arch)" = "x86_64" || test "$(arch)" = "i386" || \
@@ -868,21 +876,22 @@ clang-profile-make:
 	all
 
 clang-profile-use:
-	$(XCRUN) llvm-profdata merge -output=stockfish.profdata *.profraw
+	$(XCRUN) llvm-profdata merge -output=sugar.profdata *.profraw
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) \
-	EXTRACXXFLAGS='-fprofile-instr-use=stockfish.profdata' \
+	EXTRACXXFLAGS='-fprofile-instr-use=sugar.profdata' \
 	EXTRALDFLAGS='-fprofile-use ' \
 	all
 
 gcc-profile-make:
+	@mkdir -p profdir
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) \
-	EXTRACXXFLAGS='-fprofile-generate' \
+	EXTRACXXFLAGS='-fprofile-generate=profdir' \
 	EXTRALDFLAGS='-lgcov' \
 	all
 
 gcc-profile-use:
 	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) \
-	EXTRACXXFLAGS='-fprofile-use -fno-peel-loops -fno-tracer' \
+	EXTRACXXFLAGS='-fprofile-use=profdir -fno-peel-loops -fno-tracer' \
 	EXTRALDFLAGS='-lgcov' \
 	all
 

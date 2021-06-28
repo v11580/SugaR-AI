@@ -289,13 +289,13 @@ void UCI::loop(int argc, char* argv[]) {
       else if (token == "exp")                  Experience::show_exp(pos, false);
       else if (token == "expex")                Experience::show_exp(pos, true);
       else if (argc > 2 && token == "convert_compact_pgn") Experience::convert_compact_pgn(argc - 2, argv + 2);
-      else if (token == "export_net") {
+      else if (token == "export_net")
+      {
           std::optional<std::string> filename;
           std::string f;
-          if (is >> skipws >> f) {
-            filename = f;
-          }
-          Eval::NNUE::export_net(filename);
+          if (is >> skipws >> f)
+              filename = f;
+          Eval::NNUE::save_eval(filename);
       }
       else if (!token.empty() && token[0] != '#')
           sync_cout << "Unknown command: " << cmd << sync_endl;
