@@ -30,16 +30,18 @@ class Position;
 
 namespace Eval {
 
+  void init(bool verify);
   std::string trace(Position& pos);
   Value evaluate(const Position& pos);
 
   extern bool useNNUE;
+  extern bool useClassical;
   extern std::string eval_file_loaded;
 
   // The default net name MUST follow the format nn-[SHA256 first 12 digits].nnue
   // for the build process (profile-build and fishtest) to work. Do not change the
   // name of the macro, as it is used in the Makefile.
-  #define EvalFileDefaultName   "nn-190f102a22c3.nnue"
+  #define EvalFileDefaultName   "nn-56a5f1c4173a.nnue"
 
   namespace NNUE {
 

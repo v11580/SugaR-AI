@@ -16,8 +16,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __LEARN_H__
-#define __LEARN_H__
+#ifndef __EXPERIENCE_H__
+#define __EXPERIENCE_H__
 
 #include "types.h"
 
@@ -91,7 +91,7 @@ namespace Experience
             Stockfish::Move    move;       //4 bytes
             Stockfish::Value   value;      //4 bytes
             Stockfish::Depth   depth;      //4 bytes
-            uint16_t           count;      //2 byte2 (A scaled version of count)
+            uint16_t           count;      //2 bytes (A scaled version of count)
             uint8_t padding[2];            //2 bytes
 
             ExpEntry() = delete;
@@ -115,7 +115,7 @@ namespace Experience
                 assert(key == exp->key);
                 assert(move == exp->move);
 
-                //Merge frequency
+                //Merge the count
                 count = (uint16_t)std::min((uint32_t)count + (uint32_t)exp->count, (uint32_t)std::numeric_limits<uint16_t>::max());
 
                 //Merge value and depth if 'exp' is better or equal
@@ -157,23 +157,42 @@ namespace Experience
         ExpEntryEx* next = nullptr;
 
         ExpEntryEx() = delete;
-        ExpEntryEx(const ExpEntryEx& expEx) = delete;
-        ExpEntryEx& operator =(const ExpEntryEx& expEx) = delete;
+        ExpEntryEx(const ExpEntryEx& exp) = delete;
+        ExpEntryEx& operator =(const ExpEntryEx& exp) = delete;
 
         explicit ExpEntryEx(Stockfish::Key k, Stockfish::Move m, Stockfish::Value v, Stockfish::Depth d, uint8_t c) : Current::ExpEntry(k, m, v, d, c) {}
 
-        ExpEntryEx* find(Stockfish::Move m)
+        ExpEntryEx* find(Stockfish::Move m) const
         {
-            ExpEntryEx* expEx = this;
+            ExpEntryEx* exp = const_cast<ExpEntryEx*>(this);
             do
             {
-                if (expEx->move == m)
-                    return expEx;
+                if (exp->move == m)
+                    return exp;
 
-                expEx = expEx->next;
-            } while (expEx);
+                exp = exp->next;
+            } while (exp);
 
             return nullptr;
+        }
+
+        ExpEntryEx* find(Stockfish::Move mv, Stockfish::Depth minDepth) const
+        {
+            ExpEntryEx* temp = const_cast<ExpEntryEx*>(this);
+            do
+            {
+                if ((Stockfish::Move)temp->move == mv)
+                {
+                    if (temp->depth < minDepth)
+                        temp = nullptr;
+
+                    break;
+                }
+
+                temp = temp->next;
+            } while (temp);
+
+            return temp;
         }
 
         std::pair<int, bool> quality(Stockfish::Position& pos, int evalImportance) const;
@@ -187,7 +206,6 @@ namespace Experience
 
     void unload();
     void save();
-    void reload();
 
     void wait_for_loading_finished();
 
@@ -206,5 +224,5 @@ namespace Experience
     void add_multipv_experience(Stockfish::Key k, Stockfish::Move m, Stockfish::Value v, Stockfish::Depth d);
 }
 
-#endif
+#endif //__EXPERIENCE_H__
 

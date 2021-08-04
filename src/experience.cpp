@@ -20,6 +20,7 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <sstream>
 #include <fstream>
 #include <vector>
 #include <stdio.h> //For: remove()
@@ -105,55 +106,67 @@ namespace Experience
         virtual ~ExperienceReader() = default;
 
     protected:
-        bool check_signature_set_count(ifstream& input, size_t inputLength, const char *signature, size_t signatureLentgh, size_t entrySize)
+        bool check_signature_set_count(ifstream& input, size_t inputLength, const string &signature, size_t entrySize)
         {
             assert(input && input.is_open() && inputLength);
 
-            //Start fresh
-            match = false;
-            entriesCount = 0;
-
-            //If inpout length is less than the signature length then it can't be a match!
-            if (inputLength < signatureLentgh)
-                return false;
-
-            //Read signature
-            input.seekg(ios::beg);
-
-            //Allocate memory for signature
-            char* sig = (char*)malloc(signatureLentgh); //No null
-            if (!sig)
+            //Check if data length contains full experience entries
+            auto check_exp_count = [&]() -> bool
             {
-                sync_cout << "info string Failed to allocate " << signatureLentgh << " bytes for experience signature verification" << sync_endl;
-                return false;
-            }
-
-            if (!input.read(sig, signatureLentgh))
-            {
-                free(sig);
-                sync_cout << "info string Failed to read " << signatureLentgh << " bytes for experience signature verification" << sync_endl;
-                return false;
-            }
-
-            if (memcmp(sig, signature, signatureLentgh) == 0)
-            {
-                //Check if data length contains full experience entries
-                size_t entriesDataLength = inputLength - signatureLentgh;
+                size_t entriesDataLength = inputLength - signature.length();
                 entriesCount = entriesDataLength / entrySize;
 
                 if (entriesCount * entrySize != entriesDataLength)
                 {
                     entriesCount = 0;
-                    match = false;
+                    return false;
                 }
-                else
-                {
-                    match = true;
-                }
-            }
 
-            //Free memory
-            free(sig);
+                return true;
+            };
+
+            //Check if file signature is matching
+            auto check_signature = [&]() -> bool
+            {
+                if (signature.empty())
+                    return true;
+
+                //If inpout length is less than the signature length then it can't be a match!
+                if (inputLength < signature.length())
+                    return false;
+
+                //Start from the beginning of the file
+                input.seekg(ios::beg);
+
+                //Allocate memory for signature
+                char* sigBuffer = (char*)malloc(signature.length());
+                if (!sigBuffer)
+                {
+                    sync_cout << "info string Failed to allocate " << signature.length() << " bytes for experience signature verification" << sync_endl;
+                    return false;
+                }
+
+                if (!input.read(sigBuffer, signature.length()))
+                {
+                    free(sigBuffer);
+                    sync_cout << "info string Failed to read " << signature.length() << " bytes for experience signature verification" << sync_endl;
+                    return false;
+                }
+
+                bool signatureMatching = memcmp(sigBuffer, signature.c_str(), signature.length()) == 0;
+
+                //Free memory
+                free(sigBuffer);
+
+                return signatureMatching;
+            };
+
+            //Start fresh
+            match = check_exp_count() && check_signature();
+                
+            //Restore file pointer if it is not a match
+            if(!match)
+                input.seekg(ios::beg);
 
             return match;
         }
@@ -167,7 +180,7 @@ namespace Experience
     public:
         virtual int get_version() = 0;
         virtual bool check_signature(ifstream& input, size_t inputLength) = 0;
-        virtual bool read(ifstream& input, Current::ExpEntry& exp) = 0;
+        virtual bool read(ifstream& input, Current::ExpEntry* exp) = 0;
     };
 
     ////////////////////////////////////////////////////////////////
@@ -176,7 +189,6 @@ namespace Experience
     namespace V1
     {
         const char*  ExperienceSignature = "SugaR";
-        const size_t ExperienceSignatureLength = strlen(ExperienceSignature) * sizeof(char);
         const int    ExperienceVersion = 1;
 
         class ExperienceReader : public Experience::ExperienceReader
@@ -185,7 +197,7 @@ namespace Experience
             ExpEntry entry;
 
         public:
-            explicit ExperienceReader() : entry((Key)0, MOVE_NONE, VALUE_NONE, DEPTH_NONE) {}
+            explicit ExperienceReader() : entry((Key)0, MOVE_NONE, (Value)0, (Depth)0) {}
 
         public:
             virtual int get_version()
@@ -195,21 +207,21 @@ namespace Experience
 
             virtual bool check_signature(ifstream& input, size_t inputLength)
             {
-                return check_signature_set_count(input, inputLength, ExperienceSignature, ExperienceSignatureLength, sizeof(ExpEntry));
+                return check_signature_set_count(input, inputLength, ExperienceSignature, sizeof(ExpEntry));
             }
 
-            virtual bool read(ifstream& input, Current::ExpEntry& exp)
+            virtual bool read(ifstream& input, Current::ExpEntry* exp)
             {
                 assert(match && input.is_open());
 
                 if (!input.read((char*)&entry, sizeof(ExpEntry)))
                     return false;
 
-                exp.key   = entry.key;
-                exp.move  = entry.move;
-                exp.value = entry.value;
-                exp.depth = entry.depth;
-                exp.count = 1;
+                exp->key   = entry.key;
+                exp->move  = (Move)entry.move;
+                exp->value = (Value)entry.value;
+                exp->depth = (Depth)entry.depth;
+                exp->count = 1;
 
                 return true;
             }
@@ -221,8 +233,7 @@ namespace Experience
     ////////////////////////////////////////////////////////////////
     namespace V2
     {
-        const char*  ExperienceSignature = "SugaR Experience version 2";
-        const size_t ExperienceSignatureLength = strlen(ExperienceSignature) * sizeof(char);
+        const string ExperienceSignature = "SugaR Experience version 2";
         const int    ExperienceVersion = 2;
 
         class ExperienceReader : public Experience::ExperienceReader
@@ -238,14 +249,14 @@ namespace Experience
 
             virtual bool check_signature(ifstream& input, size_t inputLength)
             {
-                return check_signature_set_count(input, inputLength, ExperienceSignature, ExperienceSignatureLength, sizeof(ExpEntry));
+                return check_signature_set_count(input, inputLength, ExperienceSignature, sizeof(ExpEntry));
             }
 
-            virtual bool read(ifstream& input, Current::ExpEntry& exp)
+            virtual bool read(ifstream& input, Current::ExpEntry* exp)
             {
                 assert(match && input.is_open());
 
-                if (!input.read((char*)&exp, sizeof(ExpEntry)))
+                if (!input.read((char*)exp, sizeof(ExpEntry)))
                     return false;
 
                 return true;
@@ -263,7 +274,7 @@ namespace Experience
     ////////////////////////////////////////////////////////////////
     // ExpEntryEx::quality
     ////////////////////////////////////////////////////////////////
-    pair<int, bool> ExpEntryEx::quality(Position& pos, int evalImportance) const
+    pair<int, bool> ExpEntryEx::quality(Stockfish::Position& pos, int evalImportance) const
     {
         const int QualityExperienceMovesAhead = 10;
         const int QualityEvalImportanceMax = 10;
@@ -369,6 +380,7 @@ namespace Experience
         return pair<int, bool>(q / QualityEvalImportanceMax, maybeDraw);
     }
 
+    //Experience data
     namespace
     {
 #ifndef NDEBUG
@@ -380,12 +392,14 @@ namespace Experience
         class ExperienceData
         {
         private:
-            string               _filename;
+            string              _filename;
 
-            vector<ExpEntryEx*>  _expExData;
-            vector<ExpEntryEx*>  _newPvExpEx;
-            vector<ExpEntryEx*>  _newMultiPvExpEx;
-            ExpMap               _mainExp;
+            vector<ExpEntryEx*> _expData;
+            vector<ExpEntryEx*> _newPvExp;
+            vector<ExpEntryEx*> _newMultiPvExp;
+            vector<ExpEntryEx*> _oldExpData;
+
+            ExpMap              _mainExp;
 
             bool                _loading;
             atomic<bool>        _abortLoading;
@@ -402,79 +416,80 @@ namespace Experience
                 wait_for_load_finished();
                 assert(_loaderThread == nullptr);
 
-                //Free
-                for (ExpEntryEx *&p : _expExData)
+                //Clear new exp (this will also flush all new experience data to '_oldExpData' which we will delete later in this function
+                clear_new_exp();
+
+                //Free main exp data
+                for (ExpEntryEx *&p : _expData)
                     free(p);
+
+                //Delete previous game experience data
+                for (ExpEntryEx*& p : _oldExpData)
+                    delete p;
 
                 //Clear
                 _mainExp.clear();
-                _expExData.clear();
-
-                //Clear new exp
-                clear_new_exp();
+                _oldExpData.clear();
+                _expData.clear();
             }
 
             void clear_new_exp()
             {
-                //Delete PV experience
-                for (const ExpEntryEx* expEx : _newPvExpEx)
-                    delete expEx;
-
-                //Delete NonPV experience
-                for (const ExpEntryEx* expEx : _newMultiPvExpEx)
-                    delete expEx;
+                //Copy exp data to another buffer to be deleted when the whole object is destroyed or new exp file is loaded
+                for (auto& newExp : { _newPvExp, _newMultiPvExp })
+                    std::copy(newExp.begin(), newExp.end(), back_inserter(_oldExpData));
 
                 //Clear vectors
-                _newPvExpEx.clear();
-                _newMultiPvExpEx.clear();
+                _newPvExp.clear();
+                _newMultiPvExp.clear();
             }
 
-            bool link_entry(ExpEntryEx* expEx)
+            bool link_entry(ExpEntryEx* exp)
             {
-                ExpIterator itr = _mainExp.find(expEx->key);
+                ExpIterator itr = _mainExp.find(exp->key);
 
                 //If new entry: insert into map and continue
                 if (itr == _mainExp.end())
                 {
-                    _mainExp[expEx->key] = expEx;
+                    _mainExp[exp->key] = exp;
                     return true;
                 }
 
                 //If existing entry and same move exists then merge
-                ExpEntryEx* expEx2 = itr->second->find(expEx->move);
-                if (expEx2)
+                ExpEntryEx* exp2 = itr->second->find(exp->move);
+                if (exp2)
                 {
-                    expEx2->merge(expEx);
+                    exp2->merge(exp);
                     return false;
                 }
 
                 //If existing entry and different move then insert sorted based on pseudo-quality
-                expEx2 = itr->second;
+                exp2 = itr->second;
                 do
                 {
-                    if (expEx->compare(expEx2) > 0)
+                    if (exp->compare(exp2) > 0)
                     {
-                        if (expEx2 == itr->second)
+                        if (exp2 == itr->second)
                         {
-                            itr->second = expEx;
-                            expEx->next = expEx2;
+                            itr->second = exp;
+                            exp->next = exp2;
                         }
                         else
                         {
-                            expEx->next = expEx2->next;
-                            expEx2->next = expEx;
+                            exp->next = exp2->next;
+                            exp2->next = exp;
                         }
 
                         return true;
                     }
 
-                    if (!expEx2->next)
+                    if (!exp2->next)
                     {
-                        expEx2->next = expEx;
+                        exp2->next = exp;
                         return true;
                     }
 
-                    expEx2 = expEx2->next;
+                    exp2 = exp2->next;
                 } while (true);
 
                 //Should never reach here!
@@ -552,7 +567,7 @@ namespace Experience
                 if (reader->get_version() != Current::ExperienceVersion)
                     sync_cout << "info string Importing experience version (" << reader->get_version() << ") from file [" << fn << "]" << sync_endl;
 
-                //Allocate buffer for ExpEx data
+                //Allocate buffer for ExpEntryEx data
                 size_t expCount = reader->entries_count();
                 ExpEntryEx* expData = (ExpEntryEx*)malloc(expCount * sizeof(ExpEntryEx));
                 if (!expData)
@@ -566,26 +581,26 @@ namespace Experience
 
                 //Load experience entries
                 size_t duplicateMoves = 0;
-                for (size_t i = 0; i < expCount; i++)
+                ExpEntryEx *exp = expData;
+                for (size_t i = 0; i < expCount; ++i, ++exp)
                 {
                     if (_abortLoading.load(memory_order_relaxed))
                         break;
 
                     //Prepare to read
-                    ExpEntryEx* expEx = expData + i;
-                    expEx->next = nullptr;
+                    exp->next = nullptr;
 
                     //Read
-                    if (!reader->read(in, *expEx))
+                    if (!reader->read(in, exp))
                     {
-                        free(expData);
-
                         sync_cout << "info string Failed to read experience entry #" << i + 1 << " of " << expCount << sync_endl;
+
+                        delete expData;
                         return false;
                     }
 
                     //Merge
-                    if (!link_entry(expEx))
+                    if (!link_entry(exp))
                         duplicateMoves++;
                 }
 
@@ -593,7 +608,7 @@ namespace Experience
                 in.close();
 
                 //Add buffer to vector so that it will be released later
-                _expExData.push_back(expData);
+                _expData.push_back(expData);
 
                 //Stop if aborted
                 if (_abortLoading.load(memory_order_relaxed))
@@ -601,7 +616,7 @@ namespace Experience
 
                 if (reader->get_version() != Current::ExperienceVersion)
                 {
-                    sync_cout << "info string Upgrading experience file (" << fn << ") from version " << reader->get_version() << ") to version (" << Current::ExperienceVersion << ")" << sync_endl;
+                    sync_cout << "info string Upgrading experience file (" << fn << ") from version (" << reader->get_version() << ") to version (" << Current::ExperienceVersion << ")" << sync_endl;
                     save(fn, true, true);
                 }
 
@@ -650,7 +665,8 @@ namespace Experience
                 {
                     out.seekp(0, out.beg);
 
-                    if (!out.write(Current::ExperienceSignature, Current::ExperienceSignatureLength))
+                    out << Current::ExperienceSignature;
+                    if (!out)
                     {
                         sync_cout << "info string Failed to write signature to experience file [" << fn << "]" << sync_endl;
                         return false;
@@ -688,50 +704,50 @@ namespace Experience
                 size_t allPositions = 0;
                 if (saveAll)
                 {
-                    for (ExpEntryEx* expEx : _newPvExpEx)
+                    for (ExpEntryEx* expEx : _newPvExp)
                         link_entry(expEx);
 
-                    for (ExpEntryEx* expEx : _newMultiPvExpEx)
+                    for (ExpEntryEx* expEx : _newMultiPvExp)
                         link_entry(expEx);
 
-                    ExpEntryEx* expEx = nullptr;
+                    ExpEntryEx* exp = nullptr;
                     for (auto& x : _mainExp)
                     {
                         allPositions++;
-                        expEx = x.second;
+                        exp = x.second;
 
                         //Scale counts
                         uint16_t maxCount = numeric_limits<uint8_t>::min();
-                        ExpEntryEx* expEx1 = expEx;
-                        while (expEx1)
+                        ExpEntryEx* exp1 = exp;
+                        while (exp1)
                         {
-                            maxCount = max(maxCount, expEx1->count);
-                            expEx1 = expEx1->next;
+                            maxCount = max(maxCount, exp1->count);
+                            exp1 = exp1->next;
                         }
 
                         //Scale down
                         uint16_t scale = 1 + maxCount / 128;
-                        expEx1 = expEx;
-                        while (expEx1)
+                        exp1 = exp;
+                        while (exp1)
                         {
-                            expEx1->count = max(expEx1->count / scale, 1);
-                            expEx1 = expEx1->next;
+                            exp1->count = max(exp1->count / scale, 1);
+                            exp1 = exp1->next;
                         }
 
                         //Save
-                        while (expEx)
+                        while (exp)
                         {
-                            if (expEx->depth >= EXP_MIN_DEPTH)
+                            if (exp->depth >= EXP_MIN_DEPTH)
                             {
                                 allMoves++;
-                                if (!write_entry(expEx, false))
+                                if (!write_entry(exp, false))
                                 {
                                     sync_cout << "info string Failed to save experience entry to experience file [" << fn << "]" << sync_endl;
                                     return false;
                                 }
                             }
 
-                            expEx = expEx->next;
+                            exp = exp->next;
                         }
                     }
 
@@ -739,39 +755,22 @@ namespace Experience
                 }
                 else
                 {
-                    //Save new PV experience
-                    for (const ExpEntryEx* expEx : _newPvExpEx)
+                    for (auto &newExp : { _newPvExp, _newMultiPvExp })
                     {
-                        if (!expEx)
-                            continue;
-
-                        if (expEx->depth < EXP_MIN_DEPTH)
-                            continue;
-
-                        if (!write_entry(expEx, false))
+                        for (const ExpEntryEx* exp : newExp)
                         {
-                            sync_cout << "info string Failed to save new PV experience entry to experience file [" << fn << "]" << sync_endl;
-                            return false;
+                            if (exp->depth < EXP_MIN_DEPTH)
+                                continue;
+
+                            if (!write_entry(exp, false))
+                            {
+                                sync_cout << "info string Failed to save experience entry to experience file [" << fn << "]" << sync_endl;
+                                return false;
+                            }
                         }
                     }
 
-                    //Save new MultiPV experience
-                    for (const ExpEntryEx* expEx : _newMultiPvExpEx)
-                    {
-                        if (!expEx)
-                            continue;
-
-                        if (expEx->depth < EXP_MIN_DEPTH)
-                            continue;
-
-                        if (!write_entry(expEx, false))
-                        {
-                            sync_cout << "info string Failed to save new MultiPV experience entry to experience file [" << fn << "]" << sync_endl;
-                            return false;
-                        }
-                    }
-
-                    sync_cout << "info string Saved " << _newPvExpEx.size() << " PV and " << _newMultiPvExpEx.size() << " MultiPV entries to experience file: " << fn << sync_endl;
+                    sync_cout << "info string Saved " << _newPvExp.size() << " PV and " << _newMultiPvExp.size() << " MultiPV entries to experience file: " << fn << sync_endl;
                 }
 
                 //Flush buffer
@@ -797,6 +796,8 @@ namespace Experience
                 clear();
             }
 
+        public:
+
             string filename() const
             {
                 return _filename;
@@ -804,7 +805,7 @@ namespace Experience
 
             bool has_new_exp() const
             {
-                return _newPvExpEx.size() || _newMultiPvExpEx.size();
+                return _newPvExp.size() || _newMultiPvExp.size();
             }
 
             bool load(string filename, bool synchronous)
@@ -826,6 +827,11 @@ namespace Experience
                             bool loadingResult = _load(filename);
                             _loadingResult.store(loadingResult, memory_order_relaxed);
 
+                            //Copy pointer of loader thread so that we can
+                            //clear the variable now and and deleted later
+                            thread *t = _loaderThread;
+                            _loaderThread = nullptr;
+
                             //Notify
                             {
                                 lock_guard<mutex> lg2(_loaderMutex);
@@ -833,10 +839,9 @@ namespace Experience
                                 _loadingCond.notify_one();
                             }
                             
-                            //Detach and delete thread
-                            _loaderThread->detach();
-                            delete _loaderThread;
-                            _loaderThread = nullptr;
+                            //Detach and delete loader thread
+                            t->detach();
+                            delete t;
                         }));
                 }
 
@@ -910,7 +915,7 @@ namespace Experience
                 }
             }
 
-            const ExpEntryEx* probe(Key k)
+            const ExpEntryEx* probe(Key k) const
             {
                 ExpConstIterator itr = _mainExp.find(k);
                 if (itr == _mainExp.end())
@@ -923,12 +928,24 @@ namespace Experience
 
             void add_pv_experience(Key k, Move m, Value v, Depth d)
             {
-                _newPvExpEx.emplace_back(new ExpEntryEx(k, m, v, d, 1));
+                ExpEntryEx* exp = new ExpEntryEx(k, m, v, d, 1);
+
+                if (exp)
+                {
+                    _newPvExp.emplace_back(exp);
+                    link_entry(exp);
+                }
             }
 
             void add_multipv_experience(Key k, Move m, Value v, Depth d)
             {
-                _newMultiPvExpEx.emplace_back(new ExpEntryEx(k, m, v, d, 1));
+                ExpEntryEx* exp = new ExpEntryEx(k, m, v, d, 1);
+
+                if (exp)
+                {
+                    _newMultiPvExp.emplace_back(exp);
+                    link_entry(exp);
+                }
             }
         };
 
@@ -982,14 +999,6 @@ namespace Experience
             return;
 
         currentExperience->save(currentExperience->filename(), false, false);
-    }
-
-    void reload()
-    {
-        if (!currentExperience || !currentExperience->has_new_exp())
-            return;
-
-        init();
     }
 
     const ExpEntryEx* probe(Key k)
@@ -1213,7 +1222,7 @@ namespace Experience
         //If the output file is a new file, then we need to write the signature
         if (globalConversionData.outputStreamBase == 0)
         {
-            globalConversionData.outputStream.write(Current::ExperienceSignature, Current::ExperienceSignatureLength);
+            globalConversionData.outputStream << Current::ExperienceSignature.c_str();
             globalConversionData.outputStreamBase = globalConversionData.outputStream.tellp();
         }
 

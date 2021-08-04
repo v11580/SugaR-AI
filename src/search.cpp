@@ -154,7 +154,7 @@ namespace {
 void Search::init() {
 
   for (int i = 1; i < MAX_MOVES; ++i)
-      Reductions[i] = int(21.3 * std::log(i + 0.25 * std::log(i)));
+      Reductions[i] = int(21.9 * std::log(i));
 }
 
 
@@ -169,7 +169,7 @@ void Search::clear() {
   Threads.clear();
   Tablebases::init(Options["SyzygyPath"]); // Free mapped files
 
-  Experience::reload();
+  Experience::save();
   Experience::resume_learning();
 }
 
@@ -193,7 +193,7 @@ void MainThread::search() {
   Time.init(Limits, us, rootPos.game_ply());
   TT.new_search();
 
-  Eval::NNUE::verify();
+  Eval::init(true);
 
   Move bookMove = MOVE_NONE;
   if (rootMoves.empty())
@@ -217,18 +217,22 @@ void MainThread::search() {
           //Check experience book second
           if (bookMove == MOVE_NONE && (bool)Options["Experience Book"] && rootPos.game_ply() / 2 < (int)Options["Experience Book Max Moves"] && Experience::enabled())
           {
-              const Experience::ExpEntryEx* expEx = Experience::probe(rootPos.key());
+              Depth expBookMinDepth = (Depth)Options["Experience Book Min Depth"];
+              const Experience::ExpEntryEx* exp = Experience::probe(rootPos.key());
 
-              if (expEx)
+              if (exp)
               {
                   int evalImportance = (int)Options["Experience Book Eval Importance"];
                   vector<pair<const Experience::ExpEntryEx*, int>> quality;
-                  const Experience::ExpEntryEx* temp = expEx;
+                  const Experience::ExpEntryEx* temp = exp;
                   while (temp)
                   {
-                      pair<int, bool> q = temp->quality(rootPos, evalImportance);
-                      if(q.first > 0 && !q.second)
-                          quality.emplace_back(temp, q.first);
+                      if (temp->depth >= expBookMinDepth)
+                      {
+                          pair<int, bool> q = temp->quality(rootPos, evalImportance);
+                          if (q.first > 0 && !q.second)
+                              quality.emplace_back(temp, q.first);
+                      }
 
                       temp = temp->next;
                   }
@@ -257,7 +261,7 @@ void MainThread::search() {
                       int expCount = 0;
                       for (auto it = quality.rbegin(); it != quality.rend(); ++it)
                       {
-                          expCount++;
+                          ++expCount;
 
                           sync_cout
                               << "info"
@@ -266,15 +270,15 @@ void MainThread::search() {
                               << " multipv 1"
                               << " score "    << UCI::value(it->first->value)
                               << " nodes "    << expCount
-                              << " nps "      << expCount
+                              << " nps 0"
                               << " tbhits 0"
                               << " time 0"
-                              << " pv "       << UCI::move(it->first->move, rootPos.is_chess960())
+                              << " pv " << UCI::move(it->first->move, rootPos.is_chess960())
                               << sync_endl;
                       }
 
                       //Apply 'Best Move'
-                      if (!(bool)Options["Experience Book Best Move"] && quality.size() > 1)
+                      if ((bool)Options["Experience Book Best Move"] == false && quality.size() > 1)
                       {
                           static PRNG rng(now());
 
@@ -833,8 +837,8 @@ namespace {
                         update_quiet_stats(pos, ss, tempExp->move, stat_bonus(tempExp->depth), tempExp->depth);
 
                     // Extra penalty for early quiet moves of the previous ply
-                    if ((ss - 1)->moveCount <= 2 && !priorCapture)
-                        update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq, -stat_bonus(tempExp->depth + 1));
+                    if ((ss-1)->moveCount <= 2 && !priorCapture)
+                        update_continuation_histories(ss-1, pos.piece_on(prevSq), prevSq, -stat_bonus(tempExp->depth + 1));
                 }
                 // Penalty for a quiet tempExp->move() that fails low
                 else if (!pos.capture_or_promotion(tempExp->move))
@@ -985,6 +989,7 @@ namespace {
             ss->staticEval = eval = -(ss-1)->staticEval;
 
         // Save static evaluation into transposition table
+        if(!excludedMove)
         tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, MOVE_NONE, eval);
     }
 
@@ -1005,7 +1010,6 @@ namespace {
 
     // Step 7. Futility pruning: child node (~50 Elo)
     if (   !PvNode
-        &&  depth < 9
         &&  eval - futility_margin(depth, improving) >= beta
         &&  eval < VALUE_KNOWN_WIN) // Do not return unproven wins
         return eval;
@@ -1132,7 +1136,7 @@ namespace {
         && !ttMove)
         depth -= 2;
 
-moves_loop: // When in check, search starts from here
+moves_loop: // When in check, search starts here
 
     ttCapture = ttMove && pos.capture_or_promotion(ttMove);
 
@@ -1242,13 +1246,12 @@ moves_loop: // When in check, search starts from here
           {
               // Continuation history based pruning (~20 Elo)
               if (   lmrDepth < 5
-                  && (*contHist[0])[movedPiece][to_sq(move)] < CounterMovePruneThreshold
-                  && (*contHist[1])[movedPiece][to_sq(move)] < CounterMovePruneThreshold)
+                  && (*contHist[0])[movedPiece][to_sq(move)] < (depth == 1 ? 0 : -stat_bonus(depth-1))
+                  && (*contHist[1])[movedPiece][to_sq(move)] < (depth == 1 ? 0 : -stat_bonus(depth-1)))
                   continue;
 
               // Futility pruning: parent node (~5 Elo)
-              if (   lmrDepth < 7
-                  && !ss->inCheck
+              if (   !ss->inCheck
                   && ss->staticEval + 174 + 157 * lmrDepth <= alpha
                   &&  (*contHist[0])[movedPiece][to_sq(move)]
                     + (*contHist[1])[movedPiece][to_sq(move)]
@@ -1382,25 +1385,21 @@ moves_loop: // When in check, search starts from here
               r--;
 
           // Increase reduction for cut nodes (~3 Elo)
-          if (cutNode)
-              r += 1 + !captureOrPromotion;
+          if (cutNode && move != ss->killers[0])
+              r += 2;
 
-          if (!captureOrPromotion)
-          {
-              // Increase reduction if ttMove is a capture (~3 Elo)
-              if (ttCapture)
-                  r++;
+          // Increase reduction if ttMove is a capture (~3 Elo)
+          if (ttCapture)
+              r++;
 
-              ss->statScore =  thisThread->mainHistory[us][from_to(move)]
-                             + (*contHist[0])[movedPiece][to_sq(move)]
-                             + (*contHist[1])[movedPiece][to_sq(move)]
-                             + (*contHist[3])[movedPiece][to_sq(move)]
-                             - 4923;
+          ss->statScore =  thisThread->mainHistory[us][from_to(move)]
+                         + (*contHist[0])[movedPiece][to_sq(move)]
+                         + (*contHist[1])[movedPiece][to_sq(move)]
+                         + (*contHist[3])[movedPiece][to_sq(move)]
+                         - 4923;
 
-              // Decrease/increase reduction for moves with a good/bad history (~30 Elo)
-              if (!ss->inCheck)
-                  r -= ss->statScore / 14721;
-          }
+          // Decrease/increase reduction for moves with a good/bad history (~30 Elo)
+          r -= ss->statScore / 14721;
 
           // In general we want to cap the LMR depth search at newDepth. But if
           // reductions are really negative and movecount is low, we allow this move
@@ -1698,6 +1697,10 @@ moves_loop: // When in check, search starts from here
     {
       assert(is_ok(move));
 
+      // Check for legality
+      if (!pos.legal(move))
+          continue;
+
       givesCheck = pos.gives_check(move);
       captureOrPromotion = pos.capture_or_promotion(move);
 
@@ -1735,13 +1738,6 @@ moves_loop: // When in check, search starts from here
 
       // Speculative prefetch as early as possible
       prefetch(TT.first_entry(pos.key_after(move)));
-
-      // Check for legality just before making the move
-      if (!pos.legal(move))
-      {
-          moveCount--;
-          continue;
-      }
 
       ss->currentMove = move;
       ss->continuationHistory = &thisThread->continuationHistory[ss->inCheck]

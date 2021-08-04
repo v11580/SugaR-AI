@@ -386,7 +386,9 @@ ifeq ($(COMP),clang)
 	ifneq ($(KERNEL),Darwin)
 	ifneq ($(KERNEL),OpenBSD)
 	ifneq ($(KERNEL),FreeBSD)
+	ifneq ($(RTLIB),compiler-rt)
 		LDFLAGS += -latomic
+	endif
 	endif
 	endif
 	endif
@@ -403,8 +405,12 @@ ifeq ($(COMP),clang)
 endif
 
 ifeq ($(KERNEL),Darwin)
-	CXXFLAGS += -arch $(arch) -mmacosx-version-min=10.14
-	LDFLAGS += -arch $(arch) -mmacosx-version-min=10.14
+	CXXFLAGS += -mmacosx-version-min=10.14
+	LDFLAGS += -mmacosx-version-min=10.14
+	ifneq ($(arch),any)
+		CXXFLAGS += -arch $(arch)
+		LDFLAGS += -arch $(arch)
+	endif
 	XCRUN = xcrun
 endif
 

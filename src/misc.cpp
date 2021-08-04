@@ -244,7 +244,7 @@ string engine_info(bool to_uci) {
   string month, day, year;
   stringstream ss, date(__DATE__); // From compiler, format is "Sep 21 2008"
 
-  ss << "SugaR AI 2.20 " << Version << setfill('0');
+  ss << "SugaR AI 2.30 " << Version << setfill('0');
 
   ss << (to_uci  ? "\nid author ": " by ")
      << "Stockfish Team, Marco Zerbinati, Khalid Omar";
@@ -1154,6 +1154,7 @@ void std_aligned_free(void* ptr) {
 static void* aligned_large_pages_alloc_windows(size_t allocSize) {
 
   #if !defined(_WIN64)
+    (void)allocSize; // suppress unused-parameter compiler warning
     return nullptr;
   #else
 

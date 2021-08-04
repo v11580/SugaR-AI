@@ -97,9 +97,8 @@ namespace Utility {
     bool file_exists(const std::string& filename);
     bool is_game_decided(const Position& pos, Value lastScore);
 }
-// `ptr` must point to an array of size at least
-// `sizeof(T) * N + alignment` bytes, where `N` is the
-// number of elements in the array.
+// ptr must point to an array of size at least `sizeof(T) * N + alignment` bytes,
+// where N is the number of elements in the array.
 template <uintptr_t Alignment, typename T>
 T* align_ptr_up(T* ptr)
 {

@@ -63,6 +63,7 @@ namespace Stockfish {
 namespace Eval {
 
   bool useNNUE;
+  bool useClassical;
   string eval_file_loaded = "None";
 
   /// NNUE::init() tries to load a NNUE network at startup time, or when the engine
@@ -75,11 +76,14 @@ namespace Eval {
 
   void NNUE::init() {
 
-    useNNUE = Options["Use NNUE"];
+    useNNUE = Options["Use NNUE Evaluation"];
     if (!useNNUE)
         return;
 
     string eval_file = string(Options["EvalFile"]);
+
+    if (eval_file_loaded == eval_file)
+        return;
 
 #if !defined(NNUE_EMBEDDING_OFF)
     #if defined(DEFAULT_NNUE_DIRECTORY)
@@ -130,7 +134,7 @@ namespace Eval {
         UCI::OptionsMap defaults;
         UCI::init(defaults);
 
-        string msg1 = "If the UCI option \"Use NNUE\" is set to true, network evaluation parameters compatible with the engine must be available.";
+        string msg1 = "If the UCI option \"Use NNUE Evaluation\" is set to true, network evaluation parameters compatible with the engine must be available.";
         string msg2 = "The option is set to true, but the network file " + eval_file + " was not loaded successfully.";
         string msg3 = "The UCI option EvalFile might need to specify the full path, including the directory name, to the network file.";
         string msg4 = "The default net can be downloaded from: https://tests.stockfishchess.org/api/nn/" + string(defaults["EvalFile"]);
@@ -144,11 +148,6 @@ namespace Eval {
 
         exit(EXIT_FAILURE);
     }
-
-    if (useNNUE)
-        sync_cout << "info string NNUE evaluation using " << eval_file << " enabled" << sync_endl;
-    else
-        sync_cout << "info string classical evaluation enabled" << sync_endl;
   }
 }
 
@@ -196,8 +195,8 @@ using namespace Trace;
 namespace {
 
   // Threshold for lazy and space evaluation
-  constexpr Value LazyThreshold1    =  Value(1565);
-  constexpr Value LazyThreshold2    =  Value(1102);
+  constexpr Value LazyThreshold1    =  Value(3130);
+  constexpr Value LazyThreshold2    =  Value(2204);
   constexpr Value SpaceThreshold    =  Value(11551);
 
   // KingAttackWeights[PieceType] contains king attack weights by piece type
@@ -992,7 +991,7 @@ namespace {
 
     // Early exit if score is high
     auto lazy_skip = [&](Value lazyThreshold) {
-        return abs(mg_value(score) + eg_value(score)) / 2 > lazyThreshold + pos.non_pawn_material() / 64;
+        return abs(mg_value(score) + eg_value(score)) > lazyThreshold + pos.non_pawn_material() / 32;
     };
 
     if (lazy_skip(LazyThreshold1))
@@ -1081,12 +1080,43 @@ make_v:
 
 } // namespace Eval
 
+void Eval::init(bool verify)
+{
+    NNUE::init(); //This will also initialize 'useNNUE' variable
+    useClassical = Options["Use Classical Evaluation"];
+
+    if (verify)
+    {
+        if(useNNUE)
+            NNUE::verify();
+
+        if (!useNNUE && !useClassical)
+        {
+            sync_cout << "info string ERROR: At least one of NNUE or Classical evaluation should be enabled for the engine to continue" << sync_endl;
+            exit(EXIT_FAILURE);
+        }
+
+        std::stringstream ss;
+
+        if (useNNUE && useClassical)
+            ss << "info string Classical and NNUE evaluation (using " << Eval::eval_file_loaded << ") are enabled";
+        else if (useNNUE)
+            ss << "info string NNUE evaluation (using " << Eval::eval_file_loaded << ") is enabled";
+        else if (useClassical)
+            ss << "info string Classical evaluation enabled";
+        else
+            assert(false); //Should never reach here!
+
+        sync_cout << ss.str() << sync_endl;
+    }
+}
 
 /// evaluate() is the evaluator for the outer world. It returns a static
 /// evaluation of the position from the point of view of the side to move.
 
 Value Eval::evaluate(const Position& pos) {
 
+  assert(Eval::useClassical || Eval::useNNUE);
   Value v;
 
   if (!Eval::useNNUE)
@@ -1096,7 +1126,7 @@ Value Eval::evaluate(const Position& pos) {
       // Scale and shift NNUE for compatibility with search and classical evaluation
       auto  adjusted_NNUE = [&]()
       {
-         int scale =   903
+         int scale =   883
                      + 32 * pos.count<PAWN>()
                      + 32 * pos.non_pawn_material() / 1024;
 
@@ -1108,14 +1138,21 @@ Value Eval::evaluate(const Position& pos) {
          return nnue;
       };
 
-      // If there is PSQ imbalance we use the classical eval, but we switch to
-      // NNUE eval faster when shuffling or if the material on the board is high.
-      int r50 = pos.rule50_count();
-      Value psq = Value(abs(eg_value(pos.psq_score())));
-      bool classical = psq * 5 > (750 + pos.non_pawn_material() / 64) * (5 + r50);
+      if (!Eval::useClassical)
+      {
+          v = adjusted_NNUE();
+      }
+      else
+      {
+          // If there is PSQ imbalance we use the classical eval, but we switch to
+          // NNUE eval faster when shuffling or if the material on the board is high.
+          int r50 = pos.rule50_count();
+          Value psq = Value(abs(eg_value(pos.psq_score())));
+          bool classical = psq * 5 > (850 + pos.non_pawn_material() / 64) * (5 + r50);
 
-      v = classical ? Evaluation<NO_TRACE>(pos).value()  // classical
-                    : adjusted_NNUE();                   // NNUE
+          v = classical ? Evaluation<NO_TRACE>(pos).value()  // classical
+                        : adjusted_NNUE();                   // NNUE
+      }
   }
 
   // Damp down the evaluation linearly when shuffling
