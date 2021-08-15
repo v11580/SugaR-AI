@@ -163,7 +163,7 @@ At this point, the experience file is considered fragmented because it contains 
 In this example we have a fragmentation level of: 1/6 * 100 = 16.67%
 
   * #### Experience Tools
-The "SugaR AI Experience Tools" is a small +.exp file that performs functions to create, modify, and defrag experience files. Operations on a folder with 50MB of pgn files can be completed in fewer than four second.
+The "SugaR AI Experience Tools" is a small +.exe file that performs functions to create, modify, and defrag experience files. Operations on a folder with 50MB of pgn files can be completed in fewer than four second.
 
   * #### Experience Readonly
   Default: False If activated, the experience file is only read.
