@@ -78,6 +78,8 @@ void init(OptionsMap& o) {
   o["nodestime"]                       << Option(0, 0, 10000);
   o["UCI_Chess960"]                    << Option(false);
   o["UCI_AnalyseMode"]                 << Option(false);
+  o["UCI_DepthLimit"]     	           << Option(42, 12, 99);  
+  o["UCI_knodeLimit"]     	           << Option(700, 500, 9999); 
   o["UCI_LimitStrength"]               << Option(false);
   o["UCI_Elo"]                         << Option(1350, 1350, 2850);
   o["UCI_ShowWDL"]                     << Option(false);
