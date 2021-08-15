@@ -606,9 +606,9 @@ void Thread::search() {
          lastBestMoveDepth = rootDepth;
       }
 	  // Limits the search depth to UCI user input // Works with 2 new ucioption.cpp variables
-	 if  (  (Options["UCI_AnalyseMode"] && (rootDepth >= (Options["UCI_depthLimit"])))
-	 || (Threads.nodes_searched() >= (Options["UCI_knodeLimit"])*1000 && (completedDepth = rootDepth))
-	 Threads.stop = true;  
+	 if (  (Options["UCI_AnalyseMode"] && (rootDepth >= (Options["UCI_depthLimit"])))
+		|| (Threads.nodes_searched() >= (Options["UCI_knodeLimit"])*1000 && (completedDepth = rootDepth)) )
+	 	Threads.stop = true;  
 	 
       // Have we found a "mate in x"?
       if (   Limits.mate
