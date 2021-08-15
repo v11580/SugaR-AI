@@ -162,9 +162,6 @@ Duplicate moves are a problem and should be removed by merging with existing mov
 At this point, the experience file is considered fragmented because it contains duplicate moves. The fragmentation percentage is simply: (total duplicate moves) / (total unique moves) * 100
 In this example we have a fragmentation level of: 1/6 * 100 = 16.67%
 
-  * #### Experience Tools
-The "SugaR AI Experience Tools" is a small +.exe file that performs functions to create, modify, and defrag experience files. Operations on a folder with 50MB of pgn files can be completed in fewer than four seconds.
-
   * #### Experience Readonly
   Default: False If activated, the experience file is only read.
   
@@ -179,6 +176,9 @@ The "SugaR AI Experience Tools" is a small +.exe file that performs functions to
   * #### Experience Book Max Moves
 	This is a setup to limit the number of moves that can be played by the experience book.
 	If you configure 16, the engine will only play 16 moves (if available).
+	
+## Experience Tools
+The "SugaR AI Experience Tools" is a small +.exe file that performs functions to create, modify, and defrag experience files. Operations on a folder with 50MB of pgn files can be completed in fewer than four seconds.
 	
 ## A note on classical and NNUE evaluation
 
